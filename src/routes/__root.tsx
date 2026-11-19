@@ -12,6 +12,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AuthProvider } from '@/components/auth-context';
+import { MassaFitShell } from '@/components/massafit-shell';
+import { Toaster } from 'sonner';
 
 function NotFoundComponent() {
   return (
@@ -81,14 +84,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "MassaFit · Nutrição e evolução" },
+      { name: "description", content: "Seu plano pessoal para ganhar massa muscular com consistência." },
+      { name: "author", content: "MassaFit" },
+      { property: "og:title", content: "MassaFit" },
+      { property: "og:description", content: "Nutrição e evolução no seu ritmo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "theme-color", content: "#141516" },
     ],
     links: [
       {
@@ -96,6 +99,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: 'manifest', href: '/manifest.webmanifest' },
+      { rel: 'apple-touch-icon', href: '/icons/massafit-192.png' },
+      { rel:'stylesheet',href:'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap' },
     ],
   }),
   shellComponent: RootShell,
@@ -106,7 +112,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
@@ -124,7 +130,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <AuthProvider><MassaFitShell><Outlet /></MassaFitShell><Toaster theme="dark" position="top-center" richColors/></AuthProvider>
     </QueryClientProvider>
   );
 }

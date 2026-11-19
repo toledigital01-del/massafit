@@ -10,33 +10,73 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DiarioRouteImport } from './routes/diario'
+import { Route as PerfilRouteImport } from './routes/perfil'
+import { Route as PlanoRouteImport } from './routes/plano'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiarioRoute = DiarioRouteImport.update({
+  id: '/diario',
+  path: '/diario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanoRoute = PlanoRouteImport.update({
+  id: '/plano',
+  path: '/plano',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/diario': typeof DiarioRoute
+  '/perfil': typeof PerfilRoute
+  '/plano': typeof PlanoRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/diario': typeof DiarioRoute
+  '/perfil': typeof PerfilRoute
+  '/plano': typeof PlanoRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/diario': typeof DiarioRoute
+  '/perfil': typeof PerfilRoute
+  '/plano': typeof PlanoRoute
+  '/reset-password': typeof ResetPasswordRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/diario' | '/perfil' | '/plano' | '/reset-password'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/diario' | '/perfil' | '/plano' | '/reset-password'
+  id: '__root__' | '/' | '/diario' | '/perfil' | '/plano' | '/reset-password'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DiarioRoute: typeof DiarioRoute
+  PerfilRoute: typeof PerfilRoute
+  PlanoRoute: typeof PlanoRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +88,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/diario': {
+      id: '/diario'
+      path: '/diario'
+      fullPath: '/diario'
+      preLoaderRoute: typeof DiarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plano': {
+      id: '/plano'
+      path: '/plano'
+      fullPath: '/plano'
+      preLoaderRoute: typeof PlanoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DiarioRoute: DiarioRoute,
+  PerfilRoute: PerfilRoute,
+  PlanoRoute: PlanoRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

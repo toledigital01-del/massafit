@@ -30,6 +30,11 @@
  */
 
 @theme inline {
+  --font-sans: 'Manrope', sans-serif;
+  --color-success: var(--success);
+  --color-protein: var(--protein);
+  --color-carbs: var(--carbs);
+  --color-fat: var(--fat);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -73,26 +78,30 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  --radius: 0.5rem;
+  --background: oklch(0.155 0.004 260);
+  --foreground: oklch(0.96 0.003 100);
+  --card: oklch(0.195 0.004 260);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.22 0.004 260);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.88 0.195 125);
+  --primary-foreground: oklch(0.17 0.03 125);
+  --secondary: oklch(0.245 0.004 260);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.24 0.004 260);
+  --muted-foreground: oklch(0.65 0.006 260);
+  --accent: oklch(0.285 0.009 125);
+  --accent-foreground: var(--primary);
+  --success: var(--primary);
+  --protein: oklch(0.75 0.12 235);
+  --carbs: oklch(0.77 0.14 65);
+  --fat: oklch(0.73 0.1 335);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --border: oklch(0.28 0.005 260);
+  --input: var(--border);
+  --ring: var(--primary);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -151,5 +160,51 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    letter-spacing: 0;
   }
 }
+
+.app-layout { max-width: 1600px; margin: auto; min-height: 100vh; }
+.app-sidebar { position: fixed; inset: 0 auto 0 0; width: 236px; background: var(--card); border-right: 1px solid var(--border); padding: 36px 24px; display: flex; flex-direction: column; z-index: 30; }
+.brand { font-size: 28px; font-weight: 850; display: flex; gap: 10px; align-items: center; }
+.brand-symbol { background: var(--primary); color: var(--primary-foreground); border-radius: 8px; width: 35px; height: 35px; display: grid; place-items: center; transform: rotate(-7deg); }
+.nav-item { justify-content: flex-start; width: 100%; height: 48px; gap: 13px; padding: 0 16px; color: var(--muted-foreground); font-size: 13px; }
+.nav-item.active { background: color-mix(in oklch, var(--primary) 11%, transparent); color: var(--primary); }
+.nav-item svg { width: 19px; height: 19px; }
+.app-main { margin-left: 236px; padding: 0 42px 32px; }
+.topbar { height: 88px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.eyebrow { text-transform: uppercase; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted-foreground); }
+.dashboard-heading { padding: 34px 0 27px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.dashboard-heading h1 { font-size: 30px; font-weight: 750; }
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+.section-title { font-size: 17px; font-weight: 700; }
+.macro-ring { width: 150px; height: 150px; position: relative; display: grid; place-items: center; flex-shrink: 0; }
+.macro-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-track { stroke: var(--secondary); }
+.ring-calories { stroke: var(--primary); }
+.ring-protein { stroke: var(--protein); }
+.ring-carbs { stroke: var(--carbs); }
+.ring-fat { stroke: var(--fat); }
+.macro-ring.small { width: 90px; height: 90px; }
+.macro-ring circle { fill: none; stroke-width: 7; }
+.ring-value { font-size: 28px; font-weight: 800; line-height: 1.2; }
+.small .ring-value { font-size: 20px; }
+.nutrition-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.meal-image { width: 100%; height: 190px; object-fit: cover; }
+.water-glass { height: 31px; width: 22px; border: 1.5px solid var(--border); border-top: none; border-radius: 2px 2px 5px 5px; display: inline-block; background: var(--secondary); }
+.water-glass.filled { background: color-mix(in oklch,var(--protein) 70%,var(--background)); border-color: var(--protein); }
+.health-notice { display: flex; gap: 8px; align-items: center; justify-content: center; color: var(--muted-foreground); font-size: 11px; padding: 26px 0 4px; }
+.dialog-overlay { position: fixed; inset: 0; background: oklch(0.07 0 0 / 0.8); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+.dialog-body { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; width: 100%; max-width: 580px; max-height: 90dvh; overflow-y: auto; }
+.field { display: grid; gap: 7px; font-size: 12px; color: var(--muted-foreground); }
+.field input, .field select { min-height: 44px; border: 1px solid var(--input); border-radius: 6px; background: var(--background); color: var(--foreground); padding: 10px 12px; width: 100%; outline-color: var(--primary); }
+.google-button { background: oklch(0.188 0.002 285); border: 1px solid oklch(0.651 0.005 155); color: oklch(0.913 0.002 120); font-size: 14px; padding: 0 12px; gap: 10px; }
+.mobile-nav { display: none; }
+.fade-in { animation: fade-in 400ms ease-out; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media(min-width:1600px) { .app-sidebar { left: calc((100vw - 1600px)/2); } }
+@media(max-width:1150px) { .app-sidebar { width: 200px; padding: 30px 16px; } .app-main { margin-left: 200px; padding-inline: 26px; } .macro-ring { width: 125px; height: 125px; } .macro-ring.small { width: 78px; height: 78px; } }
+@media(max-width:850px) { .app-sidebar { display: none; } .app-main { margin-left: 0; padding: 0 22px 95px; } .mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 10px 14px max(10px,env(safe-area-inset-bottom)); z-index: 40; justify-content: space-around; } .mobile-nav .nav-item { flex-direction: column; gap: 5px; font-size: 10px; height: 47px; padding: 4px 7px; } .topbar { height: 72px; } }
+@media(max-width:600px) { .app-main { padding-inline: 18px; } .dashboard-heading { align-items: flex-start; padding: 26px 0 22px; flex-direction: column; } .dashboard-heading h1 { font-size: 25px; } .nutrition-grid { grid-template-columns: 1fr; gap: 16px; } .macro-ring { width: 130px; height: 130px; } .macro-ring.small { width: 83px; height: 83px; } .dialog-body { padding: 22px; } .health-notice { align-items: flex-start; font-size: 10px; } }
+@media(prefers-reduced-motion:reduce) { .fade-in { animation: none; } }

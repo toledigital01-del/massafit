@@ -1,0 +1,18 @@
+import { useState, type ReactNode } from 'react';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { Dumbbell, LayoutDashboard, Utensils, NotebookPen, UserRound, ArrowUpRight, LogOut, ShieldCheck, ChevronDown, Leaf } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AuthDialog } from './auth-dialog';
+import { useAuth } from './auth-context';
+import { supabase } from '@/integrations/supabase/client';
+const links=[{to:'/' as const,label:'Visão geral',icon:LayoutDashboard},{to:'/diario' as const,label:'Diário alimentar',icon:NotebookPen},{to:'/plano' as const,label:'Plano alimentar',icon:Utensils},{to:'/perfil' as const,label:'Meu perfil',icon:UserRound}];
+export function Brand(){return <div className="brand"><span className="brand-symbol"><Dumbbell size={22}/></span><span>Massa<span className="text-primary">Fit</span><span className="text-primary text-lg">.</span></span></div>;}
+export function MassaFitShell({children}:{children:ReactNode}){
+ const {user}=useAuth();const [auth,setAuth]=useState(false);const path=useRouterState({select:s=>s.location.pathname});
+ const nav=links.map(item=><Button asChild variant="ghost" key={item.to} className={`nav-item ${path===item.to?'active':''}`}><Link to={item.to}><item.icon/><span>{item.label}</span></Link></Button>);
+ return <div className="app-layout"><aside className="app-sidebar"><Brand/><p className="eyebrow mt-12 mb-4 pl-4">SEU ACOMPANHAMENTO</p><nav className="space-y-2">{nav}</nav>
+ <div className="mt-10 border-t border-border pt-6 px-4"><p className="eyebrow mb-3">NA PRÓXIMA ETAPA</p><p className="text-xs text-muted-foreground flex items-center gap-3 py-3"><Dumbbell size={17}/>Treino e evolução</p><p className="text-xs text-muted-foreground flex items-center gap-3 py-3"><Leaf size={17}/>Saúde e medidas</p></div>
+ <div className="mt-auto pt-10"><div className="border-t border-border pt-6"><div className="flex gap-3 items-center"><span className="size-9 bg-secondary rounded-full grid place-items-center text-primary text-xs font-bold">{user?(user.user_metadata.name || user.email || 'M').slice(0,2).toUpperCase():'MF'}</span><div className="min-w-0"><p className="text-xs font-semibold truncate">{user?user.user_metadata.name || 'Minha conta':'Seu espaço de evolução'}</p><p className="text-[10px] text-muted-foreground mt-1">{user?'Plano pessoal':'Uma refeição de cada vez'}</p></div></div>{user?<Button variant="ghost" className="mt-3 text-xs text-muted-foreground w-full justify-start" onClick={()=>void supabase.auth.signOut()}><LogOut/>Sair da conta</Button>:<Button variant="outline" className="w-full mt-4 text-xs" onClick={()=>setAuth(true)}>Entrar ou criar conta<ArrowUpRight/></Button>}</div></div></aside>
+ <main className="app-main"><header className="topbar"><div className="hidden md:block text-xs text-muted-foreground">Seu plano. Seu ritmo. <span className="text-foreground">Sua evolução.</span></div><div className="md:hidden"><Brand/></div><div className="flex items-center gap-4"><span className="hidden sm:flex text-[11px] text-muted-foreground gap-2 items-center"><span className="size-1.5 bg-primary rounded-full"/>Um pouco melhor a cada dia</span><Button variant="ghost" size="icon" title={user?'Meu perfil':'Entrar na minha conta'} asChild={Boolean(user)} onClick={()=>{if(!user)setAuth(true);}}>{user?<Link to="/perfil"><UserRound/></Link>:<UserRound/>}</Button></div></header>{children}
+ <footer className="health-notice"><ShieldCheck size={14}/><span>Este app não substitui médico ou nutricionista.</span></footer></main><nav className="mobile-nav">{nav}</nav><AuthDialog open={auth} onClose={()=>setAuth(false)}/></div>;
+}

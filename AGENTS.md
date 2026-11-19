@@ -28,3 +28,9 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Application rules
+- Keep nutrition formulas in a browser-safe pure module with numeric tests so calculations remain auditable.
+- Private data reads and writes use authenticated server functions and owner-scoped RLS; public routes show a read-only preview and invite sign-in rather than redirecting.
+- A single root auth provider owns identity transitions and clears user query caches on sign-out to avoid cross-account data leakage.
+- Home-screen installation uses manifest-only PWA support, without offline caching, to preserve preview and OAuth behavior.
