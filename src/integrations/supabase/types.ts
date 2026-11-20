@@ -217,6 +217,39 @@ export type Database = {
         }
         Relationships: []
       }
+      set_logs: {
+        Row: {
+          created_at: string
+          day: string
+          exercise: string
+          id: string
+          reps: number
+          set_number: number
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          exercise: string
+          id?: string
+          reps: number
+          set_number: number
+          user_id: string
+          weight: number
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          exercise?: string
+          id?: string
+          reps?: number
+          set_number?: number
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       supplement_logs: {
         Row: {
           day: string
