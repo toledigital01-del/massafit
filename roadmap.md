@@ -3,4 +3,6 @@
 - [ ] Etapa 2: painel diário, alimentos brasileiros, diário, água e suplementos.
 - [ ] Verificar conta real, registros persistentes, cálculos e instalação PWA.
 
+- [x] Foto do prato: IA identifica alimentos e preenche calorias.
+
 Etapas futuras (fora deste pedido): treino; medidas e check-in; lembretes, compras e exportação.
