@@ -34,3 +34,4 @@ use the editor.
 - Private data reads and writes use authenticated server functions and owner-scoped RLS; public routes show a read-only preview and invite sign-in rather than redirecting.
 - A single root auth provider owns identity transitions and clears user query caches on sign-out to avoid cross-account data leakage.
 - Home-screen installation uses manifest-only PWA support, without offline caching, to preserve preview and OAuth behavior.
+- Workout plan, exercise cues and double-progression rules live in a pure module with tests; only performed sets are stored per user.

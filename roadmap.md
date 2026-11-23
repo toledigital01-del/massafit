@@ -5,4 +5,6 @@
 
 - [x] Foto do prato: IA identifica alimentos e preenche calorias.
 
-Etapas futuras (fora deste pedido): treino; medidas e check-in; lembretes, compras e exportação.
+- [x] Treino ABCD com fotos de execução, registro de cargas, progressão e cronômetro.
+
+Etapas futuras: medidas e check-in; lembretes, compras e exportação.
