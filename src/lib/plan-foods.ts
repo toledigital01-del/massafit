@@ -196,7 +196,8 @@ export function portionText(f: Food, grams: number): string {
 }
 
 /** Arredonda para algo que dá para medir: unidades inteiras (ovo, banana), meias medidas pequenas ou múltiplos de 10/5 g. */
-export function roundGrams(f: Food, grams: number): number {
+export function roundGrams(f: Food, grams: number, small = false): number {
+  if (small && f.unit && !f.whole && f.unit.grams >= 4 && f.unit.grams < 20) return Math.max(0.5, Math.round((grams / f.unit.grams) * 2) / 2) * f.unit.grams;
   if (f.unit && f.whole) return Math.max(1, Math.round(grams / f.unit.grams)) * f.unit.grams;
   if (f.unit && f.unit.grams >= 60) return Math.max(20, Math.round(grams / 10) * 10);
   if (f.unit && f.unit.grams >= 20) return Math.max(0.5, Math.round((grams / f.unit.grams) * 2) / 2) * f.unit.grams;
