@@ -87,7 +87,7 @@ function buildMeal(type: MealType, opt: MealOption, optionIndex: number, optionC
     const m = macrosOf(w.food, grams);
     return { slot: i, food: w.food, grams, ...m, text: portionText(w.food, grams) };
   });
-  const sum = (k: 'kcal' | 'p' | 'c' | 'f') => items.reduce((a, i) => a + i[k], 0);
+  const sum = (k: 'kcal' | 'p' | 'c' | 'f') => Math.round(items.reduce((a, i) => a + i[k], 0));
   return { type, label: MEAL_LABEL[type], time: MEAL_TIME[type], option: opt, optionIndex, optionCount, items, kcal: sum('kcal'), p: sum('p'), c: sum('c'), f: sum('f'), target };
 }
 
@@ -107,7 +107,7 @@ export function buildDay(goals: Goals, ctx: Ctx): Day {
   let day!: Day;
   for (let pass = 0; pass < 4; pass++) {
     const meals = chosen.map((c, i) => buildMeal(c.type, c.opt, c.idx, c.count, { kcal: goals.calories * (w[i] ?? 0) * kcalK, p: goals.protein * (w[i] ?? 0) * pK }, ctx.state));
-    const sum = (k: 'kcal' | 'p' | 'c' | 'f') => meals.reduce((a, m) => a + m[k], 0);
+    const sum = (k: 'kcal' | 'p' | 'c' | 'f') => Math.round(meals.reduce((a, m) => a + m[k], 0));
     day = { meals, kcal: sum('kcal'), p: sum('p'), c: sum('c'), f: sum('f'), goals };
     const dk = goals.calories / day.kcal, dp = goals.protein / day.p;
     if (Math.abs(dk - 1) < 0.02 && Math.abs(dp - 1) < 0.04) break;

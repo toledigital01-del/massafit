@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
-import { BookmarkPlus, BriefcaseBusiness, Check, Dumbbell, Moon, RefreshCw, Settings2, Shuffle, Sun, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { BookmarkPlus, BriefcaseBusiness, Check, RefreshCw, Undo2, Settings2, Shuffle, Sun, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataBoundary } from '@/components/dashboard-data';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export const Route = createFileRoute('/plano')({
   component: Plan,
 });
 
+const LOGGED_KEY = 'massafit-plan-logged';
 const DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 const AVOID: { tag: Tag; label: string }[] = [
   { tag: 'lactose', label: 'Lactose' }, { tag: 'gluten', label: 'Glúten' }, { tag: 'redmeat', label: 'Carne vermelha' },
@@ -39,7 +40,9 @@ function Plan() {
   const [tab, setTab] = useState<'dia' | 'semana' | 'receitas'>('dia');
   const [swapFor, setSwapFor] = useState<{ meal: Meal; item: Item } | null>(null);
   const [prefOpen, setPrefOpen] = useState(false);
-  const [done, setDone] = useState<string[]>([]);
+  const [done, setDoneState] = useState<Record<string, string[]>>({});
+  const setDone: Dispatch<SetStateAction<Record<string, string[]>>> = fn => setDoneState(prev => { const next = typeof fn === 'function' ? fn(prev) : fn; try { localStorage.setItem(LOGGED_KEY, JSON.stringify(next)); } catch { /* ignora */ } return next; });
+  useEffect(() => { try { const all = JSON.parse(localStorage.getItem(LOGGED_KEY) ?? '{}') as Record<string, string[]>; const t = localDay(); setDoneState(Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith(t)))); } catch { /* ignora */ } }, []);
   useEffect(() => { setSettings(loadSettings()); setPrefs(loadPrefs()); setStates(loadStates()); setFavs(loadFavorites()); }, []);
 
   const training = isTrainingWeekday(weekday);
@@ -52,7 +55,7 @@ function Plan() {
     const g = data.goals ?? calculateGoals(data.profile ?? { name: '', sex: 'male', age: 47, height: 177, weight: 69, target_weight: 75, activity: 1.55, training_days: 4, shifts: false });
     const goals: Goals = { calories: g.calories, protein: g.protein, carbs: g.carbs, fat: g.fat };
     const objective = objectiveOf(data.profile ?? { weight: 69, target_weight: 75 });
-    return <PlanBody {...{ objective, goals, settings, prefs, state, weekday, setWeekday, training, tab, setTab, patchState, patchSettings, patchPrefs, favs, setFavs, swapFor, setSwapFor, prefOpen, setPrefOpen, done, setDone, act, busy }} />;
+    return <PlanBody {...{ objective, goals, settings, prefs, state, weekday, setWeekday, training, tab, setTab, patchState, patchSettings, patchPrefs, favs, setFavs, swapFor, setSwapFor, prefOpen, setPrefOpen, done, setDone, act, busy, meals: data.meals }} />;
   }}</DataBoundary>;
 }
 
@@ -62,72 +65,119 @@ function PlanBody(p: {
   tab: 'dia' | 'semana' | 'receitas'; setTab: (t: 'dia' | 'semana' | 'receitas') => void; patchState: (fn: (s: PlanState) => PlanState) => void;
   patchSettings: (s: PlanSettings) => void; patchPrefs: (p: Prefs) => void; favs: Favorite[]; setFavs: (f: Favorite[]) => void;
   swapFor: { meal: Meal; item: Item } | null; setSwapFor: (v: { meal: Meal; item: Item } | null) => void; prefOpen: boolean; setPrefOpen: (b: boolean) => void;
-  done: string[]; setDone: (d: string[]) => void; act: Act; busy: boolean;
+  done: Record<string, string[]>; setDone: Dispatch<SetStateAction<Record<string, string[]>>>; act: Act; busy: boolean; meals: { id: string; meal: string }[];
 }) {
   const { goals, settings, prefs, state, weekday, training } = p;
   const day: Day = useMemo(() => buildDay(goals, { meals: settings.meals, training, shift: settings.shift, prefs, state, dayIndex: weekday, objective: p.objective }), [p.objective, goals, settings, training, prefs, state, weekday]);
   const week: Day[] = useMemo(() => p.tab === 'semana' ? buildWeek(goals, { meals: settings.meals, shift: settings.shift, prefs, objective: p.objective }) : [], [p.objective, p.tab, goals, settings, prefs]);
   const today = weekday === weekdayIndex(new Date());
 
-  const logMeal = async (m: Meal) => {
-    const items = m.items.map(i => ({ name: i.food.name, grams: i.grams, calories: i.kcal, protein: i.p, carbs: i.c, fat: i.f }));
-    const ok = await p.act({ kind: 'custom', day: localDay(), meal: m.label, items } as never);
-    if (ok) p.setDone([...p.done, `${localDay()}:${m.type}`]);
+  const mealsRef = useRef(p.meals); mealsRef.current = p.meals;
+  const isLogged = (key: string) => key in p.done;
+  /** Registra no diário e guarda os ids criados para poder desfazer só esta ação. */
+  const register = async (key: string, label: string, items: { name: string; grams: number; calories: number; protein: number; carbs: number; fat: number }[]) => {
+    const before = new Set(mealsRef.current.filter(x => x.meal === label).map(x => x.id));
+    const ok = await p.act({ kind: 'custom', day: localDay(), meal: label, items } as never);
+    if (!ok) return;
+    await new Promise(r => setTimeout(r, 250));
+    const ids = mealsRef.current.filter(x => x.meal === label && !before.has(x.id)).map(x => x.id);
+    p.setDone(d => ({ ...d, [key]: ids }));
   };
-  const logDay = async () => { for (const m of day.meals) { if (p.done.includes(`${localDay()}:${m.type}`)) continue; await logMeal(m); } };
+  const undo = async (key: string) => {
+    for (const id of p.done[key] ?? []) await p.act({ kind: 'deleteMeal', id } as never);
+    p.setDone(d => { const n = { ...d }; delete n[key]; return n; });
+    toast.success('Registro desfeito');
+  };
+  const mealKey = (m: Meal) => `${localDay()}:${m.type}`;
+  const logMeal = (m: Meal) => register(mealKey(m), m.label, m.items.map(i => ({ name: i.food.name, grams: i.grams, calories: i.kcal, protein: i.p, carbs: i.c, fat: i.f })));
+  const logDay = async () => { for (const m of day.meals) { if (!isLogged(mealKey(m))) await logMeal(m); } };
+  const undoDay = async () => { for (const m of day.meals) { if (isLogged(mealKey(m))) await undo(mealKey(m)); } };
   const saveFav = (m: Meal) => {
     const f: Favorite = { id: `${Date.now()}`, name: m.option.name, meal: m.label, items: m.items.map(i => ({ name: i.food.name, grams: i.grams, calories: i.kcal, protein: i.p, carbs: i.c, fat: i.f })) };
     const next = [f, ...p.favs]; p.setFavs(next); saveFavorites(next); toast.success('Cardápio favorito salvo neste aparelho');
   };
   const cycle = (m: Meal) => p.patchState(s => ({ ...s, swap: Object.fromEntries(Object.entries(s.swap).filter(([k]) => !k.startsWith(`${m.type}:`))), opt: { ...s.opt, [m.type]: (m.optionIndex + 1) % m.optionCount } }));
 
-  return <div className="fade-in">
-    <div className="dashboard-heading"><div><p className="eyebrow mb-2">COMIDA DE VERDADE</p><h1>Seu plano alimentar<span className="text-primary">.</span></h1>
-      <p className="text-xs text-muted-foreground mt-2">Gerado pela sua meta de {goals.calories} kcal e {goals.protein} g de proteína. Se o check-in mudar a meta, o plano acompanha. Referência geral: ajuste com seu nutricionista.</p></div>
-      <Button variant="secondary" onClick={() => p.setPrefOpen(true)}><Settings2/>Preferências</Button></div>
+  const kcal10 = (n: number) => Math.round(n / 10) * 10;
+  const gap = Math.round((day.kcal - goals.calories) / 10) * 10;
+  const status = Math.abs(gap) <= goals.calories * 0.04 ? 'Dentro da meta' : gap < 0 ? `Faltam ${Math.abs(gap)} kcal` : `Passa ${gap} kcal`;
+  const pct = Math.min(100, Math.round((day.kcal / goals.calories) * 100));
+  const loggedCount = day.meals.filter(m => isLogged(mealKey(m))).length;
 
-    <ObjectiveCard objective={p.objective} />
-    <div className="flex flex-wrap gap-2 mb-4 items-center">
-      <div className="flex bg-secondary p-1 rounded-md">{(['dia', 'semana', 'receitas'] as const).map(t => <Button key={t} size="sm" variant={p.tab === t ? 'default' : 'ghost'} onClick={() => p.setTab(t)}>{t === 'dia' ? 'Dia' : t === 'semana' ? 'Semana' : 'Receitas'}</Button>)}</div>
-      <div className="flex bg-secondary p-1 rounded-md"><Button size="sm" variant={settings.shift ? 'ghost' : 'default'} onClick={() => p.patchSettings({ ...settings, shift: false })}><Sun/>Folga</Button><Button size="sm" variant={settings.shift ? 'default' : 'ghost'} onClick={() => p.patchSettings({ ...settings, shift: true })}><BriefcaseBusiness/>Plantão</Button></div>
-      <div className="flex bg-secondary p-1 rounded-md">{([4, 5, 6] as const).map(n => <Button key={n} size="sm" variant={settings.meals === n ? 'default' : 'ghost'} onClick={() => p.patchSettings({ ...settings, meals: n })}>{n} refeições</Button>)}</div>
+  return <div className="fade-in pb-8">
+    <div className="flex items-start justify-between gap-3 mb-4">
+      <div><h1 className="text-2xl font-bold">Plano alimentar<span className="text-primary">.</span></h1>
+        <p className="text-xs text-muted-foreground mt-1">Meta: {kcal10(goals.calories).toLocaleString('pt-BR')} kcal · {goals.protein} g de proteína</p></div>
+      <Button variant="secondary" size="icon" title="Preferências e restrições" aria-label="Preferências e restrições" onClick={() => p.setPrefOpen(true)}><Settings2/></Button>
     </div>
 
-    {p.tab === 'dia' ? <>
-      <div className="flex gap-1 mb-4 overflow-x-auto">{DAYS.map((d, i) => <Button key={d} size="sm" variant={weekday === i ? 'default' : 'secondary'} onClick={() => p.setWeekday(i)}>{d}{isTrainingWeekday(i) ? ' •' : ''}</Button>)}</div>
-      <div className="panel p-4 mb-5 text-sm">
-        <div className="flex items-center gap-2 mb-2">{training ? <Dumbbell size={16} className="text-primary"/> : <Moon size={16} className="text-primary"/>}<b>{training ? 'Dia de treino: mais carboidrato perto do treino' : 'Dia de descanso: um pouco mais de proteína e gordura boa'}</b></div>
-        <p><span className="text-primary font-bold">{day.kcal} kcal</span> · {day.p} g proteína · {day.c} g carbo · {day.f} g gordura</p>
-        <p className="text-xs text-muted-foreground mt-1">Meta: {diff(day.kcal, goals.calories, 'kcal')} · {diff(day.p, goals.protein, 'g de proteína')} · {diff(day.c, goals.carbs, 'g de carbo')}</p>
-        {today && <Button className="mt-3" size="sm" disabled={p.busy} onClick={() => void logDay()}><Check/>Comi o plano de hoje</Button>}
-      </div>
-      <div className="nutrition-grid">{day.meals.map(m => {
-        const logged = p.done.includes(`${localDay()}:${m.type}`);
-        return <section className="panel p-5" key={m.type}>
-          <div className="flex items-start justify-between mb-1"><div><span className="eyebrow">{m.time}{settings.shift ? ' · TRANSPORTÁVEL' : ''}</span><h2 className="section-title mt-1">{m.label}</h2><p className="text-xs text-muted-foreground mt-1">{m.option.name} · {m.optionIndex + 1}/{m.optionCount}</p></div>
-            <div className="flex"><Button variant="ghost" size="icon" title="Trocar a refeição inteira por outro cardápio" onClick={() => cycle(m)}><Shuffle/></Button><Button variant="ghost" size="icon" title="Salvar como favorito" onClick={() => saveFav(m)}><BookmarkPlus/></Button></div></div>
-          <p className="text-xs text-muted-foreground mb-2">{m.option.tip}</p>
-          {m.items.map(i => <div key={i.slot} className="py-2.5 border-t border-border flex items-center justify-between gap-2 text-xs">
-            <span>{i.food.name}</span><span className="flex items-center gap-1 text-muted-foreground text-right">{i.text}<Button variant="ghost" size="icon" title={`Trocar ${i.food.name}`} onClick={() => p.setSwapFor({ meal: m, item: i })}><RefreshCw/></Button></span></div>)}
-          <p className="text-xs mt-3 mb-3"><span className="text-primary font-bold">{m.kcal} kcal</span><span className="text-muted-foreground"> · {m.p} g proteína · alvo {Math.round(m.target.kcal)} kcal</span></p>
-          {today && <Button variant={logged ? 'ghost' : 'secondary'} className="w-full text-xs" disabled={p.busy || logged} onClick={() => void logMeal(m)}><Check/>{logged ? 'Registrado' : 'Comi'}</Button>}
+    <div role="tablist" aria-label="Visão do plano" className="grid grid-cols-3 bg-secondary p-1 rounded-md mb-4">
+      {([['dia', 'Hoje'], ['semana', 'Semana'], ['receitas', 'Receitas']] as const).map(([t, label]) =>
+        <button key={t} role="tab" aria-selected={p.tab === t} className={`py-2.5 text-sm rounded-sm font-medium ${p.tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} onClick={() => p.setTab(t)}>{label}</button>)}
+    </div>
+
+    {p.tab === 'dia' && <>
+      <div className="flex gap-1 mb-3 overflow-x-auto" role="group" aria-label="Dia da semana">{DAYS.map((d, i) =>
+        <button key={d} className={`flex-1 min-w-11 py-2 rounded-md text-xs ${weekday === i ? 'bg-primary text-primary-foreground font-semibold' : 'bg-secondary text-muted-foreground'}`} onClick={() => p.setWeekday(i)} aria-pressed={weekday === i}>
+          {d}{isTrainingWeekday(i) ? <span className="block text-[9px] leading-none mt-0.5">treino</span> : <span className="block text-[9px] leading-none mt-0.5 opacity-0">.</span>}</button>)}</div>
+
+      <section className="panel p-4 mb-4">
+        <div className="flex items-baseline justify-between gap-2"><p className="text-2xl font-bold tabular-nums">{kcal10(day.kcal).toLocaleString('pt-BR')}<span className="text-sm font-normal text-muted-foreground"> kcal</span></p><p className="text-sm text-muted-foreground tabular-nums">{day.p} g proteína</p></div>
+        <div className="h-1.5 bg-secondary rounded-full mt-2 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Calorias do plano em relação à meta"><div className="h-full bg-primary" style={{ width: `${pct}%` }}/></div>
+        <p className="text-xs text-muted-foreground mt-2">{status} · {training ? 'dia de treino, mais carboidrato antes do treino' : 'dia de descanso'}</p>
+        {today && <div className="mt-3 flex gap-2">
+          {loggedCount < day.meals.length && <Button className="flex-1" disabled={p.busy} onClick={() => void logDay()}><Check/>Comi o plano de hoje</Button>}
+          {loggedCount > 0 && <Button variant="outline" className={loggedCount < day.meals.length ? '' : 'flex-1'} disabled={p.busy} onClick={() => void undoDay()}><Undo2/>{loggedCount < day.meals.length ? 'Desfazer' : 'Desfazer o dia'}</Button>}</div>}
+      </section>
+
+      <div className="space-y-3">{day.meals.map(m => {
+        const logged = isLogged(mealKey(m));
+        return <section className="panel p-4" key={m.type}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0"><h2 className="font-semibold">{m.label} <span className="text-xs font-normal text-muted-foreground">{m.time}</span></h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{m.option.name}</p></div>
+            <div className="flex shrink-0"><Button variant="ghost" size="icon" title="Outro cardápio para esta refeição" aria-label="Outro cardápio para esta refeição" onClick={() => cycle(m)}><Shuffle/></Button><Button variant="ghost" size="icon" title="Salvar como favorito" aria-label="Salvar como favorito" onClick={() => saveFav(m)}><BookmarkPlus/></Button></div></div>
+          <ul className="mt-2">{m.items.map(i => <li key={i.slot} className="py-2 border-t border-border flex items-center justify-between gap-2 text-sm">
+            <span className="min-w-0">{i.food.name}<span className="block text-xs text-muted-foreground">{i.text}</span></span>
+            <Button variant="ghost" size="icon" title={`Trocar ${i.food.name}`} aria-label={`Trocar ${i.food.name}`} onClick={() => p.setSwapFor({ meal: m, item: i })}><RefreshCw/></Button></li>)}</ul>
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+            <p className="text-xs text-muted-foreground tabular-nums">{kcal10(m.kcal)} kcal · {m.p} g prot.</p>
+            {today && (logged
+              ? <Button size="sm" variant="outline" disabled={p.busy} onClick={() => void undo(mealKey(m))}><Undo2/>Desfazer</Button>
+              : <Button size="sm" variant="secondary" disabled={p.busy} onClick={() => void logMeal(m)}><Check/>Comi</Button>)}</div>
         </section>;
       })}</div>
-      {p.favs.length > 0 && <section className="panel p-5 mt-5"><h2 className="section-title mb-2">Cardápios favoritos</h2>{p.favs.map(f => <div key={f.id} className="flex items-center gap-2 mt-2"><Button size="sm" variant="secondary" className="flex-1 justify-start text-xs" disabled={p.busy} onClick={() => void p.act({ kind: 'custom', day: localDay(), meal: f.meal, items: f.items } as never)}>{f.name} · {Math.round(f.items.reduce((s, i) => s + i.calories, 0))} kcal</Button><Button size="icon" variant="ghost" title="Apagar" onClick={() => { const n = p.favs.filter(x => x.id !== f.id); p.setFavs(n); saveFavorites(n); }}><Trash2 className="text-muted-foreground"/></Button></div>)}</section>}
-    </> : p.tab === 'semana' ? <WeekView week={week} goals={goals} /> : <RecipesView objective={p.objective} prefs={prefs} busy={p.busy} act={p.act} />}
+
+      {p.favs.length > 0 && <section className="panel p-4 mt-4"><h2 className="font-semibold mb-2">Favoritos</h2>{p.favs.map(f => <div key={f.id} className="flex items-center gap-2 mt-2"><Button size="sm" variant="secondary" className="flex-1 justify-start text-xs" disabled={p.busy} onClick={() => void p.act({ kind: 'custom', day: localDay(), meal: f.meal, items: f.items } as never)}>{f.name} · {kcal10(f.items.reduce((s, i) => s + i.calories, 0))} kcal</Button><Button size="icon" variant="ghost" title="Apagar favorito" aria-label="Apagar favorito" onClick={() => { const n = p.favs.filter(x => x.id !== f.id); p.setFavs(n); saveFavorites(n); }}><Trash2 className="text-muted-foreground"/></Button></div>)}</section>}
+    </>}
+
+    {p.tab === 'semana' && <WeekView week={week} />}
+    {p.tab === 'receitas' && <RecipesView objective={p.objective} prefs={prefs} busy={p.busy} isLogged={isLogged} register={register} undo={undo} />}
+
+    <details className="panel p-4 mt-5">
+      <summary className="cursor-pointer text-sm font-medium">Ajustes do plano</summary>
+      <div className="mt-3 space-y-3">
+        <div><p className="text-xs text-muted-foreground mb-1">Tipo de dia</p><div className="grid grid-cols-2 bg-secondary p-1 rounded-md">
+          <Button size="sm" variant={settings.shift ? 'ghost' : 'default'} onClick={() => p.patchSettings({ ...settings, shift: false })}><Sun/>Folga</Button>
+          <Button size="sm" variant={settings.shift ? 'default' : 'ghost'} onClick={() => p.patchSettings({ ...settings, shift: true })}><BriefcaseBusiness/>Plantão (marmita)</Button></div></div>
+        <div><p className="text-xs text-muted-foreground mb-1">Refeições por dia</p><div className="grid grid-cols-3 bg-secondary p-1 rounded-md">{([4, 5, 6] as const).map(n => <Button key={n} size="sm" variant={settings.meals === n ? 'default' : 'ghost'} onClick={() => p.patchSettings({ ...settings, meals: n })}>{n}</Button>)}</div></div>
+      </div>
+    </details>
+    <div className="mt-4"><ObjectiveCard objective={p.objective} section="food" /></div>
 
     <SwapDialog target={p.swapFor} prefs={prefs} onClose={() => p.setSwapFor(null)} onPick={foodId => { const t = p.swapFor; if (!t) return; p.patchState(s => ({ ...s, swap: { ...s.swap, [`${t.meal.type}:${t.item.slot}`]: foodId } })); p.setSwapFor(null); }} onReset={() => { const t = p.swapFor; if (!t) return; p.patchState(s => { const swap = { ...s.swap }; delete swap[`${t.meal.type}:${t.item.slot}`]; return { ...s, swap }; }); p.setSwapFor(null); }} />
     <PrefsDialog open={p.prefOpen} prefs={prefs} onChange={p.patchPrefs} onClose={() => p.setPrefOpen(false)} />
   </div>;
 }
 
-function WeekView({ week, goals }: { week: Day[]; goals: Goals }) {
-  return <div>
-    <p className="text-xs text-muted-foreground mb-3">Sete dias com cardápios variados, já seguindo suas preferências. A <a className="text-primary underline" href="/compras">lista de compras</a> usa esta mesma semana.</p>
-    <div className="nutrition-grid">{week.map((d, i) => <section className="panel p-5" key={i}>
-      <div className="flex justify-between items-center mb-2"><h2 className="section-title">{DAYS[i]}{isTrainingWeekday(i) ? ' · treino' : ' · descanso'}</h2><span className="text-xs text-primary font-bold">{d.kcal} kcal</span></div>
-      {d.meals.map(m => <p key={m.type} className="text-xs py-1.5 border-t border-border"><b>{m.label}:</b> <span className="text-muted-foreground">{m.option.name}</span></p>)}
-      <p className="text-[11px] text-muted-foreground mt-2">{d.p} g proteína · meta {goals.calories} kcal</p></section>)}</div></div>;
+function WeekView({ week }: { week: Day[] }) {
+  return <div className="space-y-2">
+    <p className="text-xs text-muted-foreground">Cardápios variados para a semana. A <a className="text-primary underline" href="/compras">lista de compras</a> usa esta mesma semana.</p>
+    {week.map((d, i) => <details key={i} className="panel p-4">
+      <summary className="cursor-pointer flex items-center justify-between gap-2 text-sm"><span className="font-semibold">{DAYS[i]}<span className="text-xs font-normal text-muted-foreground"> · {isTrainingWeekday(i) ? 'treino' : 'descanso'}</span></span><span className="text-xs text-muted-foreground tabular-nums">{(Math.round(d.kcal / 10) * 10).toLocaleString('pt-BR')} kcal</span></summary>
+      <ul className="mt-2 text-sm">{d.meals.map(m => <li key={m.type} className="py-1.5 border-t border-border flex justify-between gap-3"><span className="text-muted-foreground shrink-0">{m.label}</span><span className="text-right">{m.option.name}</span></li>)}</ul>
+    </details>)}
+  </div>;
 }
 
 function SwapDialog({ target, prefs, onClose, onPick, onReset }: { target: { meal: Meal; item: Item } | null; prefs: Prefs; onClose: () => void; onPick: (id: string) => void; onReset: () => void }) {
@@ -149,15 +199,20 @@ function PrefsDialog({ open, prefs, onChange, onClose }: { open: boolean; prefs:
     <Button onClick={onClose}>Pronto</Button></DialogContent></Dialog>;
 }
 
-function RecipesView({ objective, prefs, busy, act }: { objective: Objective; prefs: Prefs; busy: boolean; act: Act }) {
+type Reg = (key: string, label: string, items: { name: string; grams: number; calories: number; protein: number; carbs: number; fat: number }[]) => Promise<void>;
+function RecipesView({ objective, prefs, busy, isLogged, register, undo }: { objective: Objective; prefs: Prefs; busy: boolean; isLogged: (k: string) => boolean; register: Reg; undo: (k: string) => Promise<void> }) {
   const list = recipesFor(prefs, undefined, objective);
-  return <div><p className="text-xs text-muted-foreground mb-3">Receitas simples feitas só com os alimentos do plano, respeitando suas preferências. Quantidades de 1 porção.</p>
-    <div className="nutrition-grid">{list.map(v => <section className="panel p-5" key={v.recipe.id}>
-      <span className="eyebrow">{v.recipe.meal} · {v.recipe.minutes} min</span><h2 className="section-title mt-1 mb-2">{v.recipe.name}</h2>
-      <p className="text-xs mb-2"><span className="text-primary font-bold">{v.kcal} kcal</span> · {v.p} g proteína · {v.c} g carbo · {v.f} g gordura</p>
-      <ul className="text-xs text-muted-foreground mb-2">{v.foods.map(x => <li key={x.food.id}>{x.food.name}: {x.text}</li>)}</ul>
-      <ol className="text-xs list-decimal pl-4 space-y-1 mb-2">{v.recipe.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
-      {v.recipe.tip && <p className="text-[11px] text-muted-foreground mb-2">Dica: {v.recipe.tip}</p>}
-      <Button size="sm" variant="secondary" className="w-full text-xs" disabled={busy} onClick={() => void act({ kind: 'custom', day: localDay(), meal: v.recipe.meal, items: v.foods.map(x => { const m = macrosOf(x.food, x.grams); return { name: x.food.name, grams: x.grams, calories: m.kcal, protein: m.p, carbs: m.c, fat: m.f }; }) } as never)}><Check/>Comi esta receita</Button>
-    </section>)}</div>{!list.length && <p className="text-sm">Nenhuma receita com suas preferências.</p>}</div>;
+  return <div className="space-y-2">
+    <p className="text-xs text-muted-foreground">Receitas simples com os alimentos do plano, em 1 porção.</p>
+    {list.map(v => <details key={v.recipe.id} className="panel p-4">
+      <summary className="cursor-pointer"><span className="font-semibold text-sm">{v.recipe.name}</span><span className="block text-xs text-muted-foreground mt-0.5 tabular-nums">{v.recipe.meal} · {v.recipe.minutes} min · {Math.round(v.kcal / 10) * 10} kcal · {v.p} g prot.</span></summary>
+      <ul className="text-sm mt-3">{v.foods.map(x => <li key={x.food.id} className="py-1.5 border-t border-border flex justify-between gap-3"><span>{x.food.name}</span><span className="text-muted-foreground text-right">{x.text}</span></li>)}</ul>
+      <ol className="text-sm list-decimal pl-5 space-y-1.5 mt-3">{v.recipe.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+      {v.recipe.tip && <p className="text-xs text-muted-foreground mt-3">Dica: {v.recipe.tip}</p>}
+      {isLogged(`${localDay()}:rec:${v.recipe.id}`)
+        ? <Button size="sm" variant="outline" className="w-full mt-3" disabled={busy} onClick={() => void undo(`${localDay()}:rec:${v.recipe.id}`)}><Undo2/>Desfazer</Button>
+        : <Button size="sm" variant="secondary" className="w-full mt-3" disabled={busy} onClick={() => void register(`${localDay()}:rec:${v.recipe.id}`, v.recipe.meal, v.foods.map(x => { const m = macrosOf(x.food, x.grams); return { name: x.food.name, grams: x.grams, calories: m.kcal, protein: m.p, carbs: m.c, fat: m.f }; }))}><Check/>Comi esta receita</Button>}
+    </details>)}
+    {!list.length && <p className="text-sm">Nenhuma receita com suas preferências.</p>}
+  </div>;
 }

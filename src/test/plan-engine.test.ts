@@ -67,3 +67,10 @@ describe('receitas', () => {
     expect(recipesFor({ ...NO_PREFS, avoid: ['lactose'] }).every(v => v.recipe.id !== 'vitamina-calorica')).toBe(true);
   });
 });
+
+describe('números exibidos', () => {
+  it('totais do dia e das refeições são inteiros', () => {
+    const d = buildDay(goals, ctx());
+    for (const v of [d.kcal, d.p, d.c, d.f, ...d.meals.flatMap(m => [m.kcal, m.p, m.c, m.f])]) expect(Number.isInteger(v)).toBe(true);
+  });
+});
