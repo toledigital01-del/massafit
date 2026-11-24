@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ComprasRouteImport } from './routes/compras'
 import { Route as DiarioRouteImport } from './routes/diario'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PlanoRouteImport } from './routes/plano'
@@ -19,6 +20,11 @@ import { Route as TreinoRouteImport } from './routes/treino'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComprasRoute = ComprasRouteImport.update({
+  id: '/compras',
+  path: '/compras',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiarioRoute = DiarioRouteImport.update({
@@ -49,6 +55,7 @@ const TreinoRoute = TreinoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/compras': typeof ComprasRoute
   '/diario': typeof DiarioRoute
   '/perfil': typeof PerfilRoute
   '/plano': typeof PlanoRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/compras': typeof ComprasRoute
   '/diario': typeof DiarioRoute
   '/perfil': typeof PerfilRoute
   '/plano': typeof PlanoRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/compras': typeof ComprasRoute
   '/diario': typeof DiarioRoute
   '/perfil': typeof PerfilRoute
   '/plano': typeof PlanoRoute
@@ -75,12 +84,26 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/diario' | '/perfil' | '/plano' | '/reset-password' | '/treino'
+    | '/'
+    | '/compras'
+    | '/diario'
+    | '/perfil'
+    | '/plano'
+    | '/reset-password'
+    | '/treino'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/diario' | '/perfil' | '/plano' | '/reset-password' | '/treino'
+  to:
+    | '/'
+    | '/compras'
+    | '/diario'
+    | '/perfil'
+    | '/plano'
+    | '/reset-password'
+    | '/treino'
   id:
     | '__root__'
     | '/'
+    | '/compras'
     | '/diario'
     | '/perfil'
     | '/plano'
@@ -90,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ComprasRoute: typeof ComprasRoute
   DiarioRoute: typeof DiarioRoute
   PerfilRoute: typeof PerfilRoute
   PlanoRoute: typeof PlanoRoute
@@ -104,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compras': {
+      id: '/compras'
+      path: '/compras'
+      fullPath: '/compras'
+      preLoaderRoute: typeof ComprasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diario': {
@@ -146,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ComprasRoute: ComprasRoute,
   DiarioRoute: DiarioRoute,
   PerfilRoute: PerfilRoute,
   PlanoRoute: PlanoRoute,
