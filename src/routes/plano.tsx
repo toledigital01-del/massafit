@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { BookmarkPlus, BriefcaseBusiness, Check, RefreshCw, Undo2, Settings2, Shuffle, Sun, Trash2 } from 'lucide-react';
+import { BookmarkPlus, BriefcaseBusiness, Check, Plus, RefreshCw, Undo2, Settings2, Shuffle, Sun, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataBoundary } from '@/components/dashboard-data';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { macrosOf, type Tag } from '@/lib/plan-foods';
 import type { MealType } from '@/lib/plan-templates';
 import { NO_PREFS } from '@/lib/plan-engine';
 import { recipesFor } from '@/lib/recipes';
+import { RecipeForm } from '@/components/recipe-form';
+import { loadMyRecipes, recipeTotals, saveMyRecipes, type MyRecipe } from '@/lib/my-items';
 
 export const Route = createFileRoute('/plano')({
   head: () => ({ meta: [
@@ -202,8 +204,26 @@ function PrefsDialog({ open, prefs, onChange, onClose }: { open: boolean; prefs:
 type Reg = (key: string, label: string, items: { name: string; grams: number; calories: number; protein: number; carbs: number; fat: number }[]) => Promise<void>;
 function RecipesView({ objective, prefs, busy, isLogged, register, undo }: { objective: Objective; prefs: Prefs; busy: boolean; isLogged: (k: string) => boolean; register: Reg; undo: (k: string) => Promise<void> }) {
   const list = recipesFor(prefs, undefined, objective);
+  const [mine, setMine] = useState<MyRecipe[]>([]); const [creating, setCreating] = useState(false);
+  useEffect(() => { setMine(loadMyRecipes()); }, []);
+  const addMine = (r: MyRecipe) => { const next = [r, ...mine]; setMine(next); saveMyRecipes(next); toast.success('Receita salva neste aparelho'); };
+  const rmMine = (id: string) => { const next = mine.filter(r => r.id !== id); setMine(next); saveMyRecipes(next); };
   return <div className="space-y-2">
-    <p className="text-xs text-muted-foreground">Receitas simples com os alimentos do plano, em 1 porção.</p>
+    <div className="flex items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Receitas simples com os alimentos do plano, em 1 porção.</p><Button size="sm" variant="secondary" onClick={() => setCreating(true)}><Plus/>Nova receita</Button></div>
+    {creating && <RecipeForm onSave={addMine} onClose={() => setCreating(false)} />}
+    {mine.length > 0 && <p className="text-sm font-semibold pt-2">Minhas receitas</p>}
+    {mine.map(r => { const t = recipeTotals(r); const key = `${localDay()}:rec:${r.id}`; return <details key={r.id} className="panel p-4">
+      <summary className="cursor-pointer"><span className="font-semibold text-sm">{r.name}</span><span className="block text-xs text-muted-foreground mt-0.5 tabular-nums">{r.meal} · {r.minutes} min · {t.kcal} kcal · {t.p} g prot.</span></summary>
+      <ul className="text-sm mt-3">{r.ingredients.map((x, i) => <li key={i} className="py-1.5 border-t border-border flex justify-between gap-3"><span>{x.name}</span><span className="text-muted-foreground">{x.grams} g</span></li>)}</ul>
+      <ol className="text-sm list-decimal pl-5 space-y-1.5 mt-3">{r.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+      <div className="flex gap-2 mt-3">
+        {isLogged(key)
+          ? <Button size="sm" variant="outline" className="flex-1" disabled={busy} onClick={() => void undo(key)}><Undo2/>Desfazer</Button>
+          : <Button size="sm" variant="secondary" className="flex-1" disabled={busy} onClick={() => void register(key, r.meal, r.ingredients.map(x => ({ name: x.name, grams: x.grams, calories: x.kcal, protein: x.p, carbs: x.c, fat: x.f })))}><Check/>Comi esta receita</Button>}
+        <Button size="icon" variant="ghost" title={`Apagar ${r.name}`} onClick={() => rmMine(r.id)}><Trash2 className="text-muted-foreground"/></Button>
+      </div>
+    </details>; })}
+    {mine.length > 0 && <p className="text-sm font-semibold pt-2">Receitas do MassaFit</p>}
     {list.map(v => <details key={v.recipe.id} className="panel p-4">
       <summary className="cursor-pointer"><span className="font-semibold text-sm">{v.recipe.name}</span><span className="block text-xs text-muted-foreground mt-0.5 tabular-nums">{v.recipe.meal} · {v.recipe.minutes} min · {Math.round(v.kcal / 10) * 10} kcal · {v.p} g prot.</span></summary>
       <ul className="text-sm mt-3">{v.foods.map(x => <li key={x.food.id} className="py-1.5 border-t border-border flex justify-between gap-3"><span>{x.food.name}</span><span className="text-muted-foreground text-right">{x.text}</span></li>)}</ul>

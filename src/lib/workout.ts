@@ -1,6 +1,7 @@
 import { homePlan } from './workout-home';
+import { dumbbellPlan } from './workout-dumbbell';
 export type Exercise = { slug: string; name: string; muscles: string; sets: number; repMin: number; repMax: number; rest: number; step: number; timed?: boolean; cues: string[]; mistakes: string[]; /** treino em casa: material necessário, exercício com o peso do corpo e variações */ equip?: string; bodyweight?: boolean; perSide?: boolean; easier?: string; harder?: string };
-export type WorkoutMode = 'gym' | 'home';
+export type WorkoutMode = 'gym' | 'home' | 'dumbbell';
 export type WorkoutDay = { key: 'A'|'B'|'C'|'D'; title: string; focus: string; exercises: Exercise[] };
 const ex = (slug:string,name:string,muscles:string,sets:number,repMin:number,repMax:number,rest:number,step:number,cues:string[],mistakes:string[],timed=false):Exercise=>({slug,name,muscles,sets,repMin,repMax,rest,step,cues,mistakes,timed});
 export const workoutPlan: WorkoutDay[] = [
@@ -37,8 +38,8 @@ export function workoutForDate(date = new Date(), mode: WorkoutMode = 'gym'): Wo
   const map: Record<number, WorkoutDay['key']> = {1:'A',2:'B',4:'C',5:'D'};
   const key = map[date.getDay()]; return key ? planForMode(mode).find(d=>d.key===key)! : null;
 }
-/** Plano de treino conforme o local: academia (equipamentos) ou em casa (peso do corpo + itens da casa). */
-export function planForMode(mode: WorkoutMode): WorkoutDay[] { return mode === 'home' ? homePlan : workoutPlan; }
+/** Plano de treino conforme o local: academia (equipamentos), só halteres ou em casa (peso do corpo + itens da casa). */
+export function planForMode(mode: WorkoutMode): WorkoutDay[] { return mode === 'home' ? homePlan : mode === 'dumbbell' ? dumbbellPlan : workoutPlan; }
 /** Dupla progressão: todas as séries no topo da faixa -> sobe a carga e volta ao mínimo de repetições. */
 export function suggestNext(exercise: Pick<Exercise,'sets'|'repMin'|'repMax'|'step'|'timed'>, last: {weight:number;reps:number}[]) {
   if (!last.length) return null;
