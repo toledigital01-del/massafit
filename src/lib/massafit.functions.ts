@@ -37,6 +37,7 @@ const actionSchema = z.discriminatedUnion('kind',[
   z.object({kind:z.literal('supplement'),day:daySchema,taken:z.boolean(),dose:z.number().min(3).max(5)}),
   z.object({kind:z.literal('custom'),day:daySchema,meal:z.enum(['Café da manhã','Lanche','Almoço','Pré-treino','Jantar','Ceia']),items:z.array(z.object({name:z.string().min(1).max(80),grams:z.number().min(1).max(3000),calories:z.number().min(0).max(5000),protein:z.number().min(0).max(500),carbs:z.number().min(0).max(1000),fat:z.number().min(0).max(500)})).min(1).max(20)}),
   z.object({kind:z.literal('deleteMeal'),id:z.string().uuid()}),
+  z.object({kind:z.literal('copyMeal'),from:daySchema,day:daySchema,meal:z.enum(['Café da manhã','Lanche','Almoço','Pré-treino','Jantar','Ceia'])}),
   z.object({kind:z.literal('favorite'),foodId:z.string().uuid(),favorite:z.boolean()}),
 ]);
 export const recordAction = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(actionSchema).handler(async ({data,context}) => {
@@ -53,6 +54,13 @@ export const recordAction = createServerFn({method:'POST'}).middleware([requireS
     case 'water': result = await db.from('water_logs').insert({user_id,day:data.day,amount:data.amount}); break;
     case 'weight': result = await db.from('weight_logs').upsert({user_id,day:data.day,weight:data.weight},{onConflict:'user_id,day'}); break;
     case 'supplement': result = data.taken ? await db.from('supplement_logs').upsert({user_id,day:data.day,name:'Creatina',dose:data.dose},{onConflict:'user_id,name,day'}) : await db.from('supplement_logs').delete().eq('user_id',user_id).eq('day',data.day).eq('name','Creatina'); break;
+    case 'copyMeal': {
+      if(data.from===data.day) throw new Error('Escolha outro dia para copiar.');
+      const src = await db.from('meal_logs').select('*').eq('user_id',user_id).eq('day',data.from).eq('meal',data.meal);
+      if(src.error) throw new Error('Não foi possível ler a refeição de origem.');
+      if(!src.data?.length) throw new Error('Não há registros dessa refeição no dia escolhido.');
+      result = await db.from('meal_logs').insert(src.data.map(({id:_id,created_at:_c,...r})=>({...r,day:data.day}))); break;
+    }
     case 'deleteMeal': result = await db.from('meal_logs').delete().eq('id',data.id).eq('user_id',user_id); break;
     case 'favorite': result = data.favorite ? await db.from('food_favorites').upsert({user_id,food_id:data.foodId}) : await db.from('food_favorites').delete().eq('user_id',user_id).eq('food_id',data.foodId); break;
   }

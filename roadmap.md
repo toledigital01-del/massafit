@@ -13,3 +13,4 @@ Etapas futuras: medidas e check-in; lembretes, compras e exportação.- [x] Figu
 - [x] Check-in semanal: média móvel de 7 dias, ritmo semanal e sugestão de ajuste de calorias (medidas e fotos de progresso dependem de nova tabela, a pedir ao Lovable).
 - [x] Lista de compras semanal (/compras) e exportação CSV de peso e treinos (perfil). Exames e lembretes ficam pendentes (exames precisam de tabela nova).
 - [x] Tela Progresso (/progresso): medidas, fotos frente/lado/costas em bucket privado, antes x agora; check-in com botão Aplicar ajuste de calorias.
+- [x] Diário: copiar refeição de ontem com um toque e combos ("meu café padrão") salvos no aparelho; combos sincronizados na conta dependem de tabela nova.
