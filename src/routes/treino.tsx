@@ -17,7 +17,9 @@ import { exerciseImages } from '@/lib/exercise-images';
 import { hasFigure } from '@/lib/exercise-figures';
 import { FigureAnimated, FigureFrame } from '@/components/exercise-figure';
 import { getSetLogs, saveSet } from '@/lib/workout.functions';
-import { localDay } from '@/lib/nutrition';
+import { localDay, objectiveOf } from '@/lib/nutrition';
+import { useDashboardData } from '@/components/dashboard-data';
+import { ObjectiveCard } from '@/components/objective-card';
 
 export const Route = createFileRoute('/treino')({
   head: () => ({ meta: [
@@ -98,6 +100,7 @@ function ExerciseDialog({ ex, logs, day, onClose, onRest, requireAuth, onSwap }:
 
 function Workout() {
   const { user, loading } = useAuth(); const fetchLogs = useServerFn(getSetLogs);
+  const profileQ = useDashboardData(localDay()); const objective = profileQ.data?.profile ? objectiveOf(profileQ.data.profile) : 'gain';
   const [mode, setModeState] = useState<WorkoutMode>('gym');
   useEffect(() => { try { if (localStorage.getItem(MODE_KEY) === 'home') setModeState('home'); } catch { /* sem armazenamento: segue na academia */ } }, []);
   const setMode = (m: WorkoutMode) => { setModeState(m); try { localStorage.setItem(MODE_KEY, m); } catch { /* ignora */ } };
@@ -110,6 +113,7 @@ function Workout() {
   const total = plan.exercises.reduce((s, e) => s + e.sets, 0); const done = plan.exercises.reduce((s, e) => s + Math.min(e.sets, doneSets(e.slug)), 0);
   return <div className="fade-in pb-28">
     <div className="dashboard-heading"><div><p className="eyebrow mb-2">{todayPlan ? `HOJE · ${todayPlan.title.toUpperCase()}` : 'HOJE É DIA DE DESCANSO'}</p><h1>Treino ABCD<span className="text-primary">.</span></h1><p className="text-xs text-muted-foreground mt-2">Seg A · Ter B · Qui C · Sex D · Toque no exercício para ver a execução.</p></div></div>
+    <ObjectiveCard objective={objective} section="training" />
     <div role="group" aria-label="Onde você vai treinar" className="grid grid-cols-2 gap-1 rounded-md border border-border bg-card p-1 mb-5">{([['gym', 'Academia', Dumbbell], ['home', 'Em casa', House]] as const).map(([m, label, Icon]) => <button type="button" key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`flex items-center justify-center gap-2 rounded py-2.5 text-sm font-semibold transition ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}><Icon size={16}/>{label}</button>)}</div>
     {mode === 'home' && <p className="text-xs text-muted-foreground mb-4 -mt-2">Sem equipamentos de academia: só seu corpo, uma cadeira firme, uma mesa resistente, uma mochila com peso e garrafas ou galões de água. Se sentir dor, pare e procure um profissional.</p>}
     {!user && !loading && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-3 mb-4 text-xs text-muted-foreground"><span>Prévia do treino · Entre para registrar suas cargas.</span><Button variant="link" className="h-8 p-0 text-xs" onClick={() => setAuth(true)}>Criar minha conta →</Button></div>}

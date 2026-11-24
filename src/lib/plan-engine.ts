@@ -1,13 +1,13 @@
 /** Motor do plano alimentar: monta o dia pelas metas, ajusta quantidades, respeita preferências e calcula trocas equivalentes. */
 import { FOODS, macrosOf, mustFood, portionText, roundGrams, type Food, type Tag } from './plan-foods';
-import { MEAL_LABEL, MEAL_TIME, OPTIONS, type MealOption, type MealType, type Slot } from './plan-templates';
+import { MEAL_LABEL, MEAL_TIME, OPTIONS, type Goal, type MealOption, type MealType, type Slot } from './plan-templates';
 
 export type Goals = { calories: number; protein: number; carbs: number; fat: number };
 export type Prefs = { avoid: Tag[]; vegetarian: boolean; economic: boolean; exclude: string[] };
 export const NO_PREFS: Prefs = { avoid: [], vegetarian: false, economic: false, exclude: [] };
 export type PlanState = { opt: Partial<Record<MealType, number>>; swap: Record<string, string> };
 export const EMPTY_STATE: PlanState = { opt: {}, swap: {} };
-export type Ctx = { meals: 4 | 5 | 6; training: boolean; shift: boolean; prefs: Prefs; state: PlanState; dayIndex: number };
+export type Ctx = { meals: 4 | 5 | 6; training: boolean; shift: boolean; prefs: Prefs; state: PlanState; dayIndex: number; objective?: Goal };
 
 const MEAL_SETS: Record<4 | 5 | 6, MealType[]> = {
   4: ['cafe', 'almoco', 'pre', 'jantar'],
@@ -31,8 +31,8 @@ const optionUsable = (o: MealOption, prefs: Prefs) => o.slots.every(s => usable(
 const optionCost = (o: MealOption) => o.slots.reduce((s, x) => s + mustFood(x.food).cost, 0) / o.slots.length;
 
 /** Cardápios disponíveis para a refeição, já filtrados pelas preferências (econômico: mais baratos primeiro). */
-export function optionsFor(type: MealType, prefs: Prefs, shift = false): MealOption[] {
-  let list = OPTIONS[type].filter(o => optionUsable(o, prefs));
+export function optionsFor(type: MealType, prefs: Prefs, shift = false, objective: Goal = 'gain'): MealOption[] {
+  let list = OPTIONS[type].filter(o => optionUsable(o, prefs) && (!o.goals || o.goals.includes(objective)));
   if (shift) { const portable = list.filter(o => o.portable); if (portable.length) list = portable; }
   if (prefs.economic) list = [...list].sort((a, b) => optionCost(a) - optionCost(b));
   return list;
@@ -95,8 +95,9 @@ export function buildDay(goals: Goals, ctx: Ctx): Day {
   const types = MEAL_SETS[ctx.meals];
   const w = (ctx.training ? WEIGHTS[ctx.meals].train : WEIGHTS[ctx.meals].rest);
   const chosen = types.map(type => {
-    let opts = optionsFor(type, ctx.prefs, ctx.shift);
-    if (!opts.length) opts = optionsFor(type, ctx.prefs, false);
+    const obj = ctx.objective ?? 'gain';
+    let opts = optionsFor(type, ctx.prefs, ctx.shift, obj);
+    if (!opts.length) opts = optionsFor(type, ctx.prefs, false, obj);
     if (!opts.length) opts = OPTIONS[type]; // preferências restritivas demais: não deixa a refeição vazia
     const idx = (ctx.state.opt[type] ?? ctx.dayIndex) % opts.length;
     return { type, opt: opts[idx]!, idx, count: opts.length };
