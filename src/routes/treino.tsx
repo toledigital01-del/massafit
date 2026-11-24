@@ -35,8 +35,8 @@ const MODE_KEY = 'massafit-workout-mode';
 
 /** Foto de execução quando existe; nos exercícios de casa (sem foto ainda) mostra um bloco ilustrado. */
 function ExerciseVisual({ slug, name, className, compact = false }: { slug: string; name: string; className: string; compact?: boolean }) {
-  const src = exerciseImages[slug];
-  if (src) return <img src={src} alt={`Execução correta: ${name}`} loading="lazy" className={`${className} object-cover ${compact ? '' : 'object-[center_25%]'}`}/>;
+  const src = exerciseImages[slug]; const [broken, setBroken] = useState(false);
+  if (src && !broken) return <img src={src} alt={`Execução correta: ${name}`} loading="lazy" onError={() => setBroken(true)} ref={el => { if (el?.complete && el.naturalWidth === 0) setBroken(true); }} className={`${className} object-cover ${compact ? '' : 'object-[center_25%]'}`}/>;
   if (hasFigure(slug)) return <FigureFrame slug={slug} e={1} label={`Execução: ${name}`} className={`${className} bg-muted`}/>;
   return <div role="img" aria-label={name} className={`${className} grid place-items-center bg-gradient-to-br from-primary/20 via-muted to-background`}><Dumbbell className="text-primary/70" size={compact ? 28 : 56}/></div>;
 }
