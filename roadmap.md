@@ -10,3 +10,4 @@
 - [x] Treino em casa sem equipamentos de academia (alternância Academia / Em casa na tela de treino).
 
 Etapas futuras: medidas e check-in; lembretes, compras e exportação.- [x] Figuras animadas de execução (início → fim, músculos em vermelho) para todos os exercícios, academia e casa.
+- [x] Check-in semanal: média móvel de 7 dias, ritmo semanal e sugestão de ajuste de calorias (medidas e fotos de progresso dependem de nova tabela, a pedir ao Lovable).

@@ -12,7 +12,7 @@ export const getDashboard = createServerFn({method:'POST'}).middleware([requireS
     db.from('food_items').select('*').order('name'),
     db.from('meal_logs').select('*').eq('user_id',context.userId).eq('day',data.day).order('created_at'),
     db.from('water_logs').select('*').eq('user_id',context.userId).eq('day',data.day),
-    db.from('weight_logs').select('*').eq('user_id',context.userId).order('day',{ascending:false}).limit(14),
+    db.from('weight_logs').select('*').eq('user_id',context.userId).order('day',{ascending:false}).limit(60),
     db.from('supplement_logs').select('*').eq('user_id',context.userId).eq('day',data.day),
     db.from('food_favorites').select('food_id').eq('user_id',context.userId),
     db.from('meal_logs').select('*').eq('user_id',context.userId).order('created_at',{ascending:false}).limit(30),
