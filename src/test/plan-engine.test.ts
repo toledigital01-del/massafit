@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildDay, buildWeek, equivalentGrams, NO_PREFS, EMPTY_STATE, swapCandidates, usable, optionsFor, type Goals } from '@/lib/plan-engine';
-import { mustFood, foodById } from '@/lib/plan-foods';
+import { FOODS, mustFood, foodById } from '@/lib/plan-foods';
 
 const goals: Goals = { calories: 2778, protein: 138, carbs: 408, fat: 66 };
 const ctx = (o: Partial<Parameters<typeof buildDay>[1]> = {}) => ({ meals: 5 as const, training: true, shift: false, prefs: NO_PREFS, state: EMPTY_STATE, dayIndex: 0, ...o });
@@ -49,5 +49,10 @@ describe('motor do plano alimentar', () => {
   });
   it('todos os alimentos dos cardápios existem no catálogo', () => {
     expect(foodById('arroz')).toBeTruthy();
+  });
+  it('catálogo tem ~150 alimentos, ids únicos e macros coerentes', () => {
+    expect(FOODS.length).toBeGreaterThanOrEqual(140);
+    expect(new Set(FOODS.map(f => f.id)).size).toBe(FOODS.length);
+    for (const f of FOODS) expect(Math.abs(f.p * 4 + f.c * 4 + f.f * 9 - f.kcal) / f.kcal).toBeLessThan(0.35);
   });
 });
