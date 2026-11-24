@@ -1,36 +1,31 @@
-# MassaFit — o que falta para um app completo e premium
+# Sugestões de melhorias para o MassaFit
 
-## Já pronto (etapas 1 e 2)
-- Cadastro por e-mail e Google, perfil e metas calculadas e editáveis.
-- Painel diário, plano com 6 refeições, diário alimentar, água, peso e creatina.
-- Prévia para visitantes e instalação na tela inicial.
+## 1. Prioridade alta (aproveita o que já existe)
+- **Tela "Progresso"**: registrar medidas (cintura, peito, braço, coxa...) e fotos frente/lado/costas, usando as tabelas e o armazenamento privado já criados. Comparação lado a lado "antes x agora" e gráfico de cada medida.
+- **Check-in semanal completo**: juntar peso médio, medidas e fotos num resumo de domingo, com botão "Aplicar ajuste de calorias" que atualiza a meta automaticamente.
+- **Histórico do diário**: navegar entre dias (setas ‹ ›) e copiar refeições de ontem com um toque.
 
-## Falta verificar
-- Testar com uma conta real: cadastro, perfil, registrar refeição/água/peso e ver os dados após recarregar.
+## 2. Praticidade no dia a dia
+- **Refeições salvas/combos** ("meu café padrão") para registrar em 1 toque.
+- **Leitor de código de barras** para produtos industrializados.
+- **Lembretes** (água, creatina, refeições, treino) por notificação do navegador.
+- **Lista de compras** gerada a partir do plano alimentar da semana.
 
-## Etapa 3 — Treino ABCD
-- Biblioteca de exercícios (peito/tríceps, costas/bíceps, pernas, ombros/core) com plano 4x por semana.
-- Registro de carga e repetições por série, cronômetro de descanso.
-- Sugestão de dupla progressão e gráfico de evolução por exercício.
-- "Treino do dia" aparece no painel.
+## 3. Treino
+- **Histórico e recordes pessoais** por exercício (maior carga, mais repetições), com selo de "novo recorde".
+- **Resumo pós-treino**: volume total, duração e comparação com a semana passada.
+- **Troca de exercício** por alternativa equivalente (aparelho ocupado).
 
-## Etapa 4 — Medidas e check-in semanal
-- Gráfico de peso com média móvel de 7 dias.
-- Medidas semanais (cintura, peito, braço, coxa) e fotos de progresso lado a lado (privadas).
-- Check-in semanal: compara o ritmo com a meta e sugere ajuste de calorias (aceitar/recusar); alerta se o peso sobe e as cargas não.
+## 4. Experiência premium
+- **Sequência (streak)** de dias com metas batidas e conquistas simples.
+- **Relatório semanal** em tela e **exportação CSV** dos registros.
+- **Exames de saúde**: guardar resultados (glicose, colesterol...) com datas.
+- Revisão geral no celular: estados vazios ilustrados, animações suaves, botões maiores.
 
-## Etapa 5 — Rotina e extras
-- Lista de compras semanal gerada do plano, por seção do mercado.
-- Saúde: exames (B12, vitamina D, ferro, zinco, glicemia, colesterol) com lembrete a cada 6 meses; aviso fixo de que o app não substitui médico ou nutricionista.
-- Lembretes por notificação no celular (refeições, água, treino, pesagem).
-- Exportar dados em CSV.
+## Sugestão de ordem
+1. Tela Progresso + check-in completo
+2. Histórico do diário + refeições salvas
+3. Recordes e resumo pós-treino
+4. Lembretes, lista de compras, exportação
 
-## Acabamento premium
-- Navegação inferior com Hoje, Plano, Treino, Progresso e Mais.
-- Anéis animados, transições suaves, estados de carregando/vazio/erro em todas as telas.
-- Botões grandes, alto contraste e revisão no celular.
-
-## Detalhes técnicos
-- Novas tabelas com RLS por dono: exercises, workout_plans, workout_logs, set_logs, measurements, progress_photos (bucket privado), weekly_checkins, lab_results, reminders; seed de exercícios.
-- Regras de progressão e check-in em módulo puro com testes numéricos.
-- Lembretes via Notification API do navegador enquanto o app estiver aberto/instalado (sem offline caching).
+Escolha os itens que quer e eu implemento nessa ordem.
