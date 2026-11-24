@@ -7,4 +7,6 @@
 
 - [x] Treino ABCD com fotos de execução, registro de cargas, progressão e cronômetro.
 
+- [x] Treino em casa sem equipamentos de academia (alternância Academia / Em casa na tela de treino).
+
 Etapas futuras: medidas e check-in; lembretes, compras e exportação.
