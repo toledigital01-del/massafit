@@ -9,10 +9,10 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { advise, movingAverage, weeklyRate, type WeightPoint } from '@/lib/checkin';
 import { localDay } from '@/lib/nutrition';
 
-export function CheckinCard({ weights, calories, target }: { weights: WeightPoint[]; calories?: number | undefined; target: number }) {
+export function CheckinCard({ weights, calories, target, objective = 'gain' }: { weights: WeightPoint[]; calories?: number | undefined; target: number; objective?: 'gain' | 'lose' | 'maintain' }) {
   const trend = useMemo(() => movingAverage(weights).slice(-30).map(p => ({ ...p, label: p.day.slice(8, 10) + '/' + p.day.slice(5, 7) })), [weights]);
   const wk = useMemo(() => weeklyRate(weights, localDay()), [weights]);
-  const advice = wk ? advise(wk.rate) : null;
+  const advice = wk ? advise(wk.rate, objective) : null;
   const apply = useServerFn(applyCalorieAdjustment); const qc = useQueryClient(); const [busy, setBusy] = useState(false);
   const last = trend.at(-1);
   return <section className="panel p-5 mt-5">

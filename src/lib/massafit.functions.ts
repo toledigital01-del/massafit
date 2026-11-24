@@ -22,8 +22,10 @@ export const getDashboard = createServerFn({method:'POST'}).middleware([requireS
 });
 const profileSchema = z.object({name:z.string().min(1).max(60),sex:z.enum(['male','female']),age:z.number().int().min(18).max(100),height:z.number().min(100).max(230),weight:z.number().min(30).max(300),target_weight:z.number().min(30).max(300),activity:z.number().min(1.2).max(1.9),training_days:z.number().int().min(0).max(7),shifts:z.boolean()});
 const goalSchema = z.object({calories:z.number().int().min(1000).max(7000),protein:z.number().min(30).max(600),fat:z.number().min(20).max(300),carbs:z.number().min(0).max(1200),water:z.number().int().min(500).max(8000)});
-export const saveProfile = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(z.object({profile:profileSchema,surplus:z.number().int().min(250).max(500),overrides:goalSchema.optional()})).handler(async ({data,context}) => {
+export const saveProfile = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(z.object({profile:profileSchema,surplus:z.number().int().min(-750).max(500),overrides:goalSchema.optional()})).handler(async ({data,context}) => {
   const {bmr:_bmr,expenditure:_expenditure,...calculated} = calculateGoals(data.profile,data.surplus);
+  // coluna `surplus` do banco só aceita o intervalo de ganho; déficit/manutenção ficam representados pelas calorias
+  calculated.surplus = Math.max(250,calculated.surplus);
   const {error} = await context.supabase.from('profiles').update({...data.profile,onboarded:true}).eq('id',context.userId);
   if(error) throw new Error('Não foi possível salvar o perfil.');
   const goalResult = await context.supabase.from('goals').upsert({...calculated,...data.overrides,user_id:context.userId});

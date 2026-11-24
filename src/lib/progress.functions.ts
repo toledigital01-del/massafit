@@ -37,7 +37,9 @@ export const applyCalorieAdjustment = createServerFn({ method: 'POST' }).middlew
   .handler(async ({ data, context }) => {
     const cur = await context.supabase.from('goals').select('*').eq('user_id', context.userId).maybeSingle();
     if (cur.error || !cur.data) throw new Error('Defina seu perfil e metas antes de ajustar.');
-    const calories = Math.min(7000, Math.max(1000, cur.data.calories + data.delta));
+    const prof = await context.supabase.from('profiles').select('sex').eq('id', context.userId).maybeSingle();
+    const floor = prof.data?.sex === 'female' ? 1200 : 1500;
+    const calories = Math.min(7000, Math.max(floor, cur.data.calories + data.delta));
     const carbs = Math.max(0, Math.round(cur.data.carbs + (calories - cur.data.calories) / 4));
     const { error } = await context.supabase.from('goals').update({ calories, carbs }).eq('user_id', context.userId);
     if (error) throw new Error('Não foi possível atualizar a meta.');

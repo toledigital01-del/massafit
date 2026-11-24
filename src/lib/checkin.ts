@@ -29,8 +29,24 @@ export function weeklyRate(points: WeightPoint[], today: string): { rate: number
 export type Advice = { kind: 'up' | 'keep' | 'down'; delta: number; title: string; text: string };
 
 /** Regra: <0,2 kg/sem → +150–200 kcal; 0,2–0,5 → manter; >0,5 → −150 kcal. */
-export function advise(rate: number): Advice {
+export function advise(rate: number, objective: 'gain' | 'lose' | 'maintain' = 'gain'): Advice {
+  if (objective === 'lose') return adviseLoss(rate);
+  if (objective === 'maintain') return adviseMaintain(rate);
   if (rate < 0.2) return { kind: 'up', delta: 175, title: 'Aumente um pouco a comida', text: `Você ganhou ${rate.toLocaleString('pt-BR')} kg na semana, abaixo da meta de 0,2–0,5 kg. Some cerca de 150–200 kcal por dia (ex.: mais uma porção de arroz e feijão ou uma banana com pasta de amendoim).` };
   if (rate <= 0.5) return { kind: 'keep', delta: 0, title: 'Ritmo perfeito', text: `Ganho de ${rate.toLocaleString('pt-BR')} kg na semana, dentro da faixa ideal de 0,2–0,5 kg. Mantenha as calorias.` };
   return { kind: 'down', delta: -150, title: 'Ganhando rápido demais', text: `Ganho de ${rate.toLocaleString('pt-BR')} kg na semana, acima de 0,5 kg: parte tende a ser gordura. Reduza cerca de 150 kcal por dia.` };
+}
+
+const kg = (n: number) => n.toLocaleString('pt-BR');
+/** Emagrecer: ritmo saudável de perda 0,25–0,75 kg/sem (rate negativo = perdeu). */
+function adviseLoss(rate: number): Advice {
+  if (rate > -0.25) return { kind: 'down', delta: -150, title: 'Perda lenta: reduza um pouco', text: `Variação de ${kg(rate)} kg na semana, menos que os 0,25–0,75 kg de perda desejados. Reduza cerca de 150 kcal por dia (ex.: menos uma porção de carboidrato) e confira se está pesando e registrando tudo.` };
+  if (rate >= -0.75) return { kind: 'keep', delta: 0, title: 'Ritmo perfeito', text: `Perda de ${kg(Math.abs(rate))} kg na semana, dentro da faixa de 0,25–0,75 kg. Mantenha as calorias.` };
+  return { kind: 'up', delta: 150, title: 'Perdendo rápido demais', text: `Perda de ${kg(Math.abs(rate))} kg na semana, acima de 0,75 kg: há risco de perder músculo. Some cerca de 150 kcal por dia.` };
+}
+/** Manter: variação de até 0,2 kg/sem. */
+function adviseMaintain(rate: number): Advice {
+  if (rate > 0.2) return { kind: 'down', delta: -100, title: 'Peso subindo', text: `Variação de +${kg(rate)} kg na semana. Reduza cerca de 100 kcal por dia se quiser manter o peso.` };
+  if (rate < -0.2) return { kind: 'up', delta: 100, title: 'Peso caindo', text: `Variação de ${kg(rate)} kg na semana. Some cerca de 100 kcal por dia para manter o peso.` };
+  return { kind: 'keep', delta: 0, title: 'Peso estável', text: 'Variação dentro de ±0,2 kg na semana. Mantenha as calorias.' };
 }

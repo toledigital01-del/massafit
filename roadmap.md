@@ -18,3 +18,4 @@ Etapas futuras: medidas e check-in; lembretes, compras e exportação.- [x] Figu
 - [x] Troca de exercício por alternativa equivalente e sequência de semanas com 3+ treinos.
 - [x] Revisão no celular: menu inferior com os 7 itens (nomes curtos), fallback para figura quando a foto não carrega, páginas de erro em português.
 - [x] Plano alimentar flexível: gerado pelas metas, trocas equivalentes, preferências/restrições, "Comi" em um toque, favoritos, semana e compras pelo plano
+- [x] Objetivo emagrecer/manter/ganhar: meta com déficit, check-in e projeção por objetivo
