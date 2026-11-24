@@ -70,20 +70,21 @@ function solveMeal(slots: Work[], target: { kcal: number; p: number }): void {
   }
 }
 
-function buildMeal(type: MealType, opt: MealOption, optionIndex: number, optionCount: number, target: { kcal: number; p: number }, state: PlanState): Meal {
+/** `relax` (0 a 1) afrouxa os limites de porção quando as metas fogem muito do tamanho padrão dos cardápios (ex.: 1.200 kcal). */
+function buildMeal(type: MealType, opt: MealOption, optionIndex: number, optionCount: number, target: { kcal: number; p: number }, state: PlanState, relax = 0): Meal {
   const work: Work[] = opt.slots.map((s, i) => {
     const swapId = state.swap[`${type}:${i}`];
     const orig = mustFood(s.food);
     const food = swapId ? mustFood(swapId) : orig;
     const g0 = swapId ? equivalentGrams(orig, s.g, food) : s.g;
     // gorduras "fixas" (azeite, pasta, castanha) escalam um pouco com as calorias da refeição
-    if (s.role === 'fixed' && food.group === 'gordura') return { food, role: 'energy' as const, g: g0, lo: 0.5 * g0, hi: 2 * g0 };
+    if (s.role === 'fixed' && food.group === 'gordura') return { food, role: 'energy' as const, g: g0, lo: (1 - 0.8 * relax) * 0.5 * g0, hi: (1 + relax) * 2 * g0 };
     const lo = (s.min ?? (s.role === 'protein' ? 0.85 : 0.5)) * g0, hi = (s.max ?? (s.role === 'protein' ? 2.2 : 1.8)) * g0;
-    return { food, role: s.role, g: g0, lo: s.role === 'fixed' ? g0 : lo, hi: s.role === 'fixed' ? g0 : hi };
+    return { food, role: s.role, g: g0, lo: s.role === 'fixed' ? g0 : (1 - 0.7 * relax) * lo, hi: s.role === 'fixed' ? g0 : (1 + relax) * hi };
   });
   solveMeal(work, target);
   const items: Item[] = work.map((w, i) => {
-    const grams = roundGrams(w.food, w.g);
+    const grams = roundGrams(w.food, w.g, relax > 0);
     const m = macrosOf(w.food, grams);
     return { slot: i, food: w.food, grams, ...m, text: portionText(w.food, grams) };
   });
@@ -91,7 +92,10 @@ function buildMeal(type: MealType, opt: MealOption, optionIndex: number, optionC
   return { type, label: MEAL_LABEL[type], time: MEAL_TIME[type], option: opt, optionIndex, optionCount, items, kcal: sum('kcal'), p: sum('p'), c: sum('c'), f: sum('f'), target };
 }
 
-export function buildDay(goals: Goals, ctx: Ctx): Day {
+export function buildDay(goalsIn: Goals, ctx0: Ctx): Day {
+  // metas muito baixas não comportam 5 ou 6 refeições com porções mínimas: usa 4. Proteína limitada a 35% das calorias.
+  const ctx = goalsIn.calories < 1700 && ctx0.meals > 4 ? { ...ctx0, meals: 4 as const } : ctx0;
+  const goals = { ...goalsIn, protein: Math.min(goalsIn.protein, Math.round(goalsIn.calories * 0.35 / 4)) };
   const types = MEAL_SETS[ctx.meals];
   const w = (ctx.training ? WEIGHTS[ctx.meals].train : WEIGHTS[ctx.meals].rest);
   const chosen = types.map(type => {
@@ -104,16 +108,20 @@ export function buildDay(goals: Goals, ctx: Ctx): Day {
   });
   // Refeições com mínimos/máximos (ex.: meio copo de leite) desviam do alvo; 3 passadas redistribuem a diferença.
   let kcalK = 1, pK = 1;
-  let day!: Day;
-  for (let pass = 0; pass < 4; pass++) {
-    const meals = chosen.map((c, i) => buildMeal(c.type, c.opt, c.idx, c.count, { kcal: goals.calories * (w[i] ?? 0) * kcalK, p: goals.protein * (w[i] ?? 0) * pK }, ctx.state));
+  let day!: Day; let best: Day | undefined; let bestErr = Infinity;
+  let relax = 0;
+  for (let pass = 0; pass < 9; pass++) {
+    const meals = chosen.map((c, i) => buildMeal(c.type, c.opt, c.idx, c.count, { kcal: goals.calories * (w[i] ?? 0) * kcalK, p: goals.protein * (w[i] ?? 0) * pK }, ctx.state, relax));
     const sum = (k: 'kcal' | 'p' | 'c' | 'f') => Math.round(meals.reduce((a, m) => a + m[k], 0));
-    day = { meals, kcal: sum('kcal'), p: sum('p'), c: sum('c'), f: sum('f'), goals };
+    day = { meals, kcal: sum('kcal'), p: sum('p'), c: sum('c'), f: sum('f'), goals: goalsIn };
     const dk = goals.calories / day.kcal, dp = goals.protein / day.p;
+    const err = Math.abs(dk - 1) + 0.3 * Math.abs(dp - 1);
+    if (err < bestErr) { best = day; bestErr = err; }
     if (Math.abs(dk - 1) < 0.02 && Math.abs(dp - 1) < 0.04) break;
+    if (pass >= 2 && Math.abs(dk - 1) > 0.03) relax = 1; // as passadas normais não bastaram: libera porções menores/maiores
     kcalK *= dk; pK *= dp;
   }
-  return day;
+  return best ?? day; // as passadas oscilam perto do alvo: fica com a mais próxima
 }
 
 export type Swap = { food: Food; grams: number; text: string; kcal: number; p: number };
