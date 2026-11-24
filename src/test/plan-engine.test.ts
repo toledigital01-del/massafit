@@ -56,3 +56,14 @@ describe('motor do plano alimentar', () => {
     for (const f of FOODS) expect(Math.abs(f.p * 4 + f.c * 4 + f.f * 9 - f.kcal) / f.kcal).toBeLessThan(0.35);
   });
 });
+
+import { RECIPES, recipesFor } from '@/lib/recipes';
+describe('receitas', () => {
+  it('ingredientes existem e receitas respeitam preferências', () => {
+    expect(RECIPES.every(r => r.ingredients.every(([id]) => !!foodById(id)))).toBe(true);
+    const veg = recipesFor({ ...NO_PREFS, vegetarian: true });
+    expect(veg.length).toBeGreaterThan(0);
+    expect(veg.every(v => v.foods.every(x => usable(x.food, { ...NO_PREFS, vegetarian: true })))).toBe(true);
+    expect(recipesFor({ ...NO_PREFS, avoid: ['lactose'] }).every(v => v.recipe.id !== 'vitamina-calorica')).toBe(true);
+  });
+});
