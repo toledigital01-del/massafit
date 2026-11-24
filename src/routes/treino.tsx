@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
-import { Flame, Repeat, Trophy, Check, ChevronRight, Clock, Dumbbell, House, Package, Pause, Play, Timer, TrendingUp, X, AlertTriangle, CircleCheck } from 'lucide-react';
+import { Flame, Repeat, Trophy, Check, ChevronRight, Clock, Dumbbell, House, Lightbulb, Package, Pause, Weight, Play, Timer, TrendingUp, X, AlertTriangle, CircleCheck } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/components/auth-context';
 import { AuthDialog } from '@/components/auth-dialog';
 import { planForMode, workoutForDate, suggestNext, type Exercise, type WorkoutMode } from '@/lib/workout';
+import { EXERCISE_TIPS } from '@/lib/exercise-tips';
 import { alternativesFor } from '@/lib/workout-alt';
 import { streakInfo } from '@/lib/streak';
 import { isNewRecord, personalRecord, sessionSummary } from '@/lib/records';
@@ -23,7 +24,7 @@ import { ObjectiveCard } from '@/components/objective-card';
 
 export const Route = createFileRoute('/treino')({
   head: () => ({ meta: [
-    { title: 'Treino ABCD na academia ou em casa · MassaFit' },
+    { title: 'Treino ABCD na academia, com halteres ou em casa · MassaFit' },
     { name: 'description', content: 'Treino ABCD 4x por semana na academia ou em casa, sem equipamentos, com execução guiada, registro de carga, progressão e cronômetro de descanso.' },
     { property: 'og:title', content: 'Treino ABCD · MassaFit' },
     { property: 'og:description', content: 'Execução correta, cargas registradas e progressão automática.' },
@@ -84,6 +85,7 @@ function ExerciseDialog({ ex, logs, day, onClose, onRest, requireAuth, onSwap }:
     <div className="p-5 space-y-6">
       <div className="grid grid-cols-3 text-center border-y border-border py-3">{[[`${ex.sets}`, 'séries'], [`${ex.repMin}–${ex.repMax}`, unit], [fmt(ex.rest), 'descanso']].map(([v, l]) => <div key={l}><p className="font-bold text-lg">{v}</p><p className="text-[10px] text-muted-foreground">{l}</p></div>)}</div>
       {ex.equip && <div className="rounded-md bg-muted/40 p-3 text-xs space-y-1.5"><p className="flex gap-2 items-start"><Package size={14} className="text-primary shrink-0 mt-0.5"/><span><span className="font-semibold">Material:</span> {ex.equip}</span></p>{ex.easier && <p><span className="font-semibold">Mais fácil:</span> <span className="text-muted-foreground">{ex.easier}</span></p>}{ex.harder && <p><span className="font-semibold">Mais difícil:</span> <span className="text-muted-foreground">{ex.harder}</span></p>}</div>}
+      {EXERCISE_TIPS[ex.slug] && <p className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm flex gap-2 items-start"><Lightbulb size={16} className="text-primary shrink-0 mt-0.5"/><span><span className="font-semibold">Dica:</span> {EXERCISE_TIPS[ex.slug]}</span></p>}
       <section><h3 className="section-title flex gap-2 items-center"><CircleCheck size={18} className="text-primary"/>Execução correta</h3><ol className="mt-3 space-y-2">{ex.cues.map((c, i) => <li key={c} className="flex gap-3 text-sm"><span className="size-6 shrink-0 rounded-full bg-primary/15 text-primary grid place-items-center text-xs font-bold">{i + 1}</span><span>{c}</span></li>)}</ol>
       <div className="mt-4 rounded-md bg-destructive/10 p-3"><p className="text-xs font-semibold flex gap-2 items-center text-destructive"><AlertTriangle size={14}/>Evite</p><ul className="mt-1 text-xs text-muted-foreground list-disc pl-5 space-y-0.5">{ex.mistakes.map(m => <li key={m}>{m}</li>)}</ul></div></section>
       {suggestion && <div className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm"><p className="flex gap-2 items-center font-semibold"><TrendingUp size={16} className="text-primary"/>{suggestion.increase ? (ex.bodyweight ? 'Hora de progredir!' : 'Hora de subir a carga!') : 'Meta de hoje'}</p><p className="text-xs text-muted-foreground mt-1">{ex.timed ? `Segure ${suggestion.reps} s em cada série.` : ex.bodyweight ? `${suggestion.increase ? `Escolha uma variação mais difícil ou coloque ${suggestion.weight} kg na mochila · ` : ''}${suggestion.weight > 0 ? `${suggestion.weight} kg extra` : 'Peso do corpo'} × ${suggestion.reps} reps · última vez: ${last.map(s => `${s.weight > 0 ? `+${s.weight}kg ` : ''}${s.reps}`).join(', ')}` : `${suggestion.weight} kg × ${suggestion.reps} reps · última vez: ${last.map(s => `${s.weight}×${s.reps}`).join(', ')}`}</p></div>}
@@ -102,7 +104,7 @@ function Workout() {
   const { user, loading } = useAuth(); const fetchLogs = useServerFn(getSetLogs);
   const profileQ = useDashboardData(localDay()); const objective = profileQ.data?.profile ? objectiveOf(profileQ.data.profile) : 'gain';
   const [mode, setModeState] = useState<WorkoutMode>('gym');
-  useEffect(() => { try { if (localStorage.getItem(MODE_KEY) === 'home') setModeState('home'); } catch { /* sem armazenamento: segue na academia */ } }, []);
+  useEffect(() => { try { const m = localStorage.getItem(MODE_KEY); if (m === 'home' || m === 'dumbbell') setModeState(m); } catch { /* sem armazenamento: segue na academia */ } }, []);
   const setMode = (m: WorkoutMode) => { setModeState(m); try { localStorage.setItem(MODE_KEY, m); } catch { /* ignora */ } };
   const todayPlan = workoutForDate(new Date(), mode); const [key, setKey] = useState(todayPlan?.key ?? 'A');
   const [open, setOpen] = useState<Exercise | null>(null); const [rest, setRest] = useState<{ s: number; id: number } | null>(null); const [auth, setAuth] = useState(false);
@@ -114,8 +116,9 @@ function Workout() {
   return <div className="fade-in pb-28">
     <div className="dashboard-heading"><div><p className="eyebrow mb-2">{todayPlan ? `HOJE · ${todayPlan.title.toUpperCase()}` : 'HOJE É DIA DE DESCANSO'}</p><h1>Treino ABCD<span className="text-primary">.</span></h1><p className="text-xs text-muted-foreground mt-2">Seg A · Ter B · Qui C · Sex D · Toque no exercício para ver a execução.</p></div></div>
     <ObjectiveCard objective={objective} section="training" />
-    <div role="group" aria-label="Onde você vai treinar" className="grid grid-cols-2 gap-1 rounded-md border border-border bg-card p-1 mb-5">{([['gym', 'Academia', Dumbbell], ['home', 'Em casa', House]] as const).map(([m, label, Icon]) => <button type="button" key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`flex items-center justify-center gap-2 rounded py-2.5 text-sm font-semibold transition ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}><Icon size={16}/>{label}</button>)}</div>
+    <div role="group" aria-label="Onde você vai treinar" className="grid grid-cols-3 gap-1 rounded-md border border-border bg-card p-1 mb-5">{([['gym', 'Academia', Dumbbell], ['dumbbell', 'Só halteres', Weight], ['home', 'Peso do corpo', House]] as const).map(([m, label, Icon]) => <button type="button" key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`flex items-center justify-center gap-1.5 rounded py-2.5 text-xs sm:text-sm font-semibold transition ${mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}><Icon size={16}/>{label}</button>)}</div>
     {mode === 'home' && <p className="text-xs text-muted-foreground mb-4 -mt-2">Sem equipamentos de academia: só seu corpo, uma cadeira firme, uma mesa resistente, uma mochila com peso e garrafas ou galões de água. Se sentir dor, pare e procure um profissional.</p>}
+    {mode === 'dumbbell' && <p className="text-xs text-muted-foreground mb-4 -mt-2">Só com um par de halteres (ou garrafas e galões de água) e um banco ou cadeira firme. Se o peso ficar leve, aumente as repetições e diminua o descanso. Se sentir dor, pare e procure um profissional.</p>}
     {!user && !loading && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-3 mb-4 text-xs text-muted-foreground"><span>Prévia do treino · Entre para registrar suas cargas.</span><Button variant="link" className="h-8 p-0 text-xs" onClick={() => setAuth(true)}>Criar minha conta →</Button></div>}
     <div className="grid grid-cols-4 gap-2 mb-5">{planForMode(mode).map(d => <button type="button" key={d.key} onClick={() => setKey(d.key)} className={`rounded-md border p-3 text-left transition ${key === d.key ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}><span className="block text-2xl font-bold">{d.key}</span><span className="block text-[10px] text-muted-foreground leading-tight mt-1">{d.focus}</span></button>)}</div>
     <div className="panel p-4 mb-5 flex items-center gap-4"><Dumbbell className="text-primary shrink-0"/><div className="flex-1"><p className="text-sm font-semibold">{plan.title} · {plan.focus}</p><div className="h-1.5 bg-muted rounded-full mt-2 overflow-hidden"><div className="h-full bg-primary transition-all" style={{ width: `${total ? done / total * 100 : 0}%` }}/></div></div><span className="text-xs text-muted-foreground tabular-nums">{done}/{total} séries</span></div>
@@ -124,7 +127,7 @@ function Workout() {
     {user && q.isPending ? <div className="space-y-3 animate-pulse">{[0, 1, 2].map(i => <div key={i} className="h-28 bg-muted rounded-md"/>)}</div> : q.isError ? <div className="py-10 text-center"><p className="text-sm text-muted-foreground mb-4">Não foi possível carregar seus treinos.</p><Button onClick={() => void q.refetch()}>Tentar novamente</Button></div> :
     <div className="grid gap-3 md:grid-cols-2">{plan.exercises.map((e, i) => { const n = doneSets(e.slug); return <button type="button" key={e.slug} onClick={() => setOpen(e)} className="panel overflow-hidden flex text-left hover:border-primary/60 transition">
       <ExerciseVisual slug={e.slug} name={e.name} className="w-28 h-28 shrink-0" compact/>
-      <div className="flex-1 p-3 min-w-0"><p className="text-[10px] text-muted-foreground">{i + 1} · {e.muscles}</p><p className="font-semibold text-sm mt-1 leading-tight">{e.name}</p><p className="text-xs text-muted-foreground mt-2">{e.sets} × {e.repMin}–{e.repMax}{e.timed ? ' s' : ''}{e.perSide ? ' por lado' : ''} · {fmt(e.rest)}</p>{n > 0 && <p className={`text-[11px] mt-1 font-semibold ${n >= e.sets ? 'text-primary' : ''}`}>{n >= e.sets ? '✓ Concluído' : `${n}/${e.sets} séries feitas`}</p>}</div>
+      <div className="flex-1 p-3 min-w-0"><p className="text-[10px] text-muted-foreground">{i + 1} · {e.muscles}</p><p className="font-semibold text-sm mt-1 leading-tight">{e.name}</p><p className="text-xs text-muted-foreground mt-2">{e.sets} × {e.repMin}–{e.repMax}{e.timed ? ' s' : ''}{e.perSide ? ' por lado' : ''} · {fmt(e.rest)}</p>{EXERCISE_TIPS[e.slug] && <p className="text-[11px] text-muted-foreground mt-1.5 line-clamp-2 flex gap-1"><Lightbulb size={12} className="text-primary shrink-0 mt-0.5"/>{EXERCISE_TIPS[e.slug]}</p>}{n > 0 && <p className={`text-[11px] mt-1 font-semibold ${n >= e.sets ? 'text-primary' : ''}`}>{n >= e.sets ? '✓ Concluído' : `${n}/${e.sets} séries feitas`}</p>}</div>
       <ChevronRight className="self-center mr-2 text-muted-foreground shrink-0"/></button>; })}</div>}
     {open && <ExerciseDialog key={open.slug} onSwap={setOpen} ex={open} logs={logs} day={day} onClose={() => setOpen(null)} onRest={s => setRest({ s, id: Date.now() })} requireAuth={() => { if (!user) { setAuth(true); return false; } return true; }}/>}
     {rest && <RestTimer key={rest.id} seconds={rest.s} onClose={() => setRest(null)}/>}

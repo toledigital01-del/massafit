@@ -65,3 +65,13 @@ describe('treino em casa (sem equipamentos de academia)', () => {
     expect(suggestNext(prancha, Array(3).fill({ weight: 0, reps: 60 }))).toEqual({ weight: 0, reps: 70, increase: false });
   });
 });
+
+describe('modo só halteres e dicas', () => {
+  it('tem 4 treinos e toda a lista de exercícios tem dica', async () => {
+    const { planForMode } = await import('@/lib/workout');
+    const { EXERCISE_TIPS } = await import('@/lib/exercise-tips');
+    const plan = planForMode('dumbbell');
+    expect(plan.map(d => d.key)).toEqual(['A', 'B', 'C', 'D']);
+    for (const mode of ['gym', 'home', 'dumbbell'] as const) for (const d of planForMode(mode)) for (const e of d.exercises) expect(EXERCISE_TIPS[e.slug], `${mode}/${e.slug}`).toBeTruthy();
+  });
+});
