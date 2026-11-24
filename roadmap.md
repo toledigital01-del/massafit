@@ -15,3 +15,4 @@ Etapas futuras: medidas e check-in; lembretes, compras e exportação.- [x] Figu
 - [x] Tela Progresso (/progresso): medidas, fotos frente/lado/costas em bucket privado, antes x agora; check-in com botão Aplicar ajuste de calorias.
 - [x] Diário: copiar refeição de ontem com um toque e combos ("meu café padrão") salvos no aparelho; combos sincronizados na conta dependem de tabela nova.
 - [x] Treino: recorde pessoal por exercício, troféu em séries que batem recorde e resumo do treino (séries, volume, vs. último, recordes).
+- [x] Troca de exercício por alternativa equivalente e sequência de semanas com 3+ treinos.
