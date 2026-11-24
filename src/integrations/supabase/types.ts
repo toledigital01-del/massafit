@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      body_measurements: {
+        Row: {
+          arm: number | null
+          calf: number | null
+          chest: number | null
+          created_at: string
+          day: string
+          hip: number | null
+          id: string
+          thigh: number | null
+          user_id: string
+          waist: number | null
+        }
+        Insert: {
+          arm?: number | null
+          calf?: number | null
+          chest?: number | null
+          created_at?: string
+          day: string
+          hip?: number | null
+          id?: string
+          thigh?: number | null
+          user_id: string
+          waist?: number | null
+        }
+        Update: {
+          arm?: number | null
+          calf?: number | null
+          chest?: number | null
+          created_at?: string
+          day?: string
+          hip?: number | null
+          id?: string
+          thigh?: number | null
+          user_id?: string
+          waist?: number | null
+        }
+        Relationships: []
+      }
       food_favorites: {
         Row: {
           food_id: string
@@ -214,6 +253,33 @@ export type Database = {
           target_weight?: number
           training_days?: number
           weight?: number
+        }
+        Relationships: []
+      }
+      progress_photos: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          path: string
+          pose: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          path: string
+          pose: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          path?: string
+          pose?: string
+          user_id?: string
         }
         Relationships: []
       }

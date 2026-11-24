@@ -15,6 +15,13 @@
       "when": 1795145226090,
       "tag": "0001_workout_set_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795539894768,
+      "tag": "0002_body_measurements_progress_photos",
+      "breakpoints": true
     }
   ]
 }
