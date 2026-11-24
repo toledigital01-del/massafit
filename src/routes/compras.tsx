@@ -3,7 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Copy, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { formatQty, weeklyShoppingList } from '@/lib/shopping';
+import { DataBoundary } from '@/components/dashboard-data';
+import { calculateGoals } from '@/lib/nutrition';
+import { loadPrefs, loadSettings, DEFAULT_SETTINGS } from '@/lib/plan-storage';
+import { NO_PREFS } from '@/lib/plan-engine';
+import { formatQty, planShoppingList } from '@/lib/shopping';
 
 export const Route = createFileRoute('/compras')({
   head: () => ({ meta: [
@@ -15,12 +19,15 @@ export const Route = createFileRoute('/compras')({
 });
 const KEY = 'massafit-shopping-checked';
 
-function Shopping() {
+function Shopping() { return <DataBoundary>{data => <ShoppingBody goals={data.goals ?? calculateGoals(data.profile!)} />}</DataBoundary>; }
+
+function ShoppingBody({ goals }: { goals: { calories: number; protein: number; carbs: number; fat: number } }) {
   const [shiftDays, setShiftDays] = useState(0);
+  const [cfg, setCfg] = useState({ prefs: NO_PREFS, meals: DEFAULT_SETTINGS.meals });
   const [checked, setChecked] = useState<string[]>([]);
-  useEffect(() => { try { setChecked(JSON.parse(localStorage.getItem(KEY) ?? '[]')); } catch { /* ignora */ } }, []);
+  useEffect(() => { setCfg({ prefs: loadPrefs(), meals: loadSettings().meals }); try { setChecked(JSON.parse(localStorage.getItem(KEY) ?? '[]')); } catch { /* ignora */ } }, []);
   const toggle = (n: string) => setChecked(c => { const next = c.includes(n) ? c.filter(x => x !== n) : [...c, n]; try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* ignora */ } return next; });
-  const items = useMemo(() => weeklyShoppingList(shiftDays), [shiftDays]);
+  const items = useMemo(() => planShoppingList({ calories: goals.calories, protein: goals.protein, carbs: goals.carbs, fat: goals.fat }, { meals: cfg.meals, prefs: cfg.prefs, shiftDays }), [goals.calories, goals.protein, goals.carbs, goals.fat, cfg, shiftDays]);
   const groups = useMemo(() => [...new Set(items.map(i => i.category))].map(c => ({ c, list: items.filter(i => i.category === c) })), [items]);
   const text = groups.map(g => `${g.c}\n${g.list.map(i => `- ${i.name}: ${formatQty(i.grams)}`).join('\n')}`).join('\n\n');
   return <div className="fade-in">
