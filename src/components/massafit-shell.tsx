@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Dumbbell, LayoutDashboard, Utensils, NotebookPen, UserRound, ArrowUpRight, LogOut, ShieldCheck, ChevronDown, Leaf } from 'lucide-react';
+import { Dumbbell, LayoutDashboard, Utensils, NotebookPen, UserRound, ArrowUpRight, LogOut, ShieldCheck, ChevronDown, Leaf, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from './auth-dialog';
 import { useAuth } from './auth-context';
 import { supabase } from '@/integrations/supabase/client';
-const links=[{to:'/' as const,label:'Visão geral',icon:LayoutDashboard},{to:'/diario' as const,label:'Diário alimentar',icon:NotebookPen},{to:'/plano' as const,label:'Plano alimentar',icon:Utensils},{to:'/treino' as const,label:'Treino',icon:Dumbbell},{to:'/perfil' as const,label:'Meu perfil',icon:UserRound}];
+const links=[{to:'/' as const,label:'Visão geral',icon:LayoutDashboard},{to:'/diario' as const,label:'Diário alimentar',icon:NotebookPen},{to:'/plano' as const,label:'Plano alimentar',icon:Utensils},{to:'/treino' as const,label:'Treino',icon:Dumbbell},{to:'/compras' as const,label:'Lista de compras',icon:ShoppingCart},{to:'/perfil' as const,label:'Meu perfil',icon:UserRound}];
 export function Brand(){return <div className="brand"><span className="brand-symbol"><Dumbbell size={22}/></span><span>Massa<span className="text-primary">Fit</span><span className="text-primary text-lg">.</span></span></div>;}
 export function MassaFitShell({children}:{children:ReactNode}){
  const {user}=useAuth();const [auth,setAuth]=useState(false);const path=useRouterState({select:s=>s.location.pathname});
