@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { calculateGoals, localDay, objectiveOf, type Objective } from '@/lib/nutrition';
 import { ObjectiveCard } from '@/components/objective-card';
+import { MealTitle, mealCardClass } from '@/components/meal-title';
 import { buildDay, buildWeek, isTrainingWeekday, optionsFor, swapCandidates, weekdayIndex, type Day, type Goals, type Item, type Meal, type PlanState, type Prefs } from '@/lib/plan-engine';
 import { DEFAULT_SETTINGS, loadFavorites, loadPrefs, loadSettings, loadStates, saveFavorites, savePrefs, saveSettings, saveStates, stateFor, type Favorite, type PlanSettings } from '@/lib/plan-storage';
 import { macrosOf, type Tag } from '@/lib/plan-foods';
@@ -132,12 +133,11 @@ function PlanBody(p: {
 
       <div className="space-y-3">{day.meals.map(m => {
         const logged = isLogged(mealKey(m));
-        return <section className="panel p-4" key={m.type}>
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0"><h2 className="font-semibold">{m.label} <span className="text-xs font-normal text-muted-foreground">{m.time}</span></h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{m.option.name}</p></div>
+        return <section className={mealCardClass(logged)} key={m.type}>
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <MealTitle label={m.label} meta={m.time} sub={m.option.name} done={logged} />
             <div className="flex shrink-0"><Button variant="ghost" size="icon" title="Outro cardápio para esta refeição" aria-label="Outro cardápio para esta refeição" onClick={() => cycle(m)}><Shuffle/></Button><Button variant="ghost" size="icon" title="Salvar como favorito" aria-label="Salvar como favorito" onClick={() => saveFav(m)}><BookmarkPlus/></Button></div></div>
-          <ul className="mt-2">{m.items.map(i => <li key={i.slot} className="py-2 border-t border-border flex items-center justify-between gap-2 text-sm">
+          <ul>{m.items.map(i => <li key={i.slot} className="py-2 border-t border-border flex items-center justify-between gap-2 text-sm">
             <span className="min-w-0">{i.food.name}<span className="block text-xs text-muted-foreground">{i.text}</span></span>
             <Button variant="ghost" size="icon" title={`Trocar ${i.food.name}`} aria-label={`Trocar ${i.food.name}`} onClick={() => p.setSwapFor({ meal: m, item: i })}><RefreshCw/></Button></li>)}</ul>
           <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
