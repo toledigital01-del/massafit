@@ -88,31 +88,37 @@ export type Database = {
           calories: number
           carbs: number
           fat: number
+          food_group: string
           id: string
           name: string
           portion_grams: number
           portion_label: string
           protein: number
+          tags: string[]
         }
         Insert: {
           calories: number
           carbs: number
           fat: number
+          food_group?: string
           id?: string
           name: string
           portion_grams: number
           portion_label: string
           protein: number
+          tags?: string[]
         }
         Update: {
           calories?: number
           carbs?: number
           fat?: number
+          food_group?: string
           id?: string
           name?: string
           portion_grams?: number
           portion_label?: string
           protein?: number
+          tags?: string[]
         }
         Relationships: []
       }
@@ -213,6 +219,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      meal_plan_settings: {
+        Row: {
+          economic: boolean
+          excluded: string[]
+          meal_count: number
+          menus: Json
+          restrictions: string[]
+          swaps: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          economic?: boolean
+          excluded?: string[]
+          meal_count?: number
+          menus?: Json
+          restrictions?: string[]
+          swaps?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          economic?: boolean
+          excluded?: string[]
+          meal_count?: number
+          menus?: Json
+          restrictions?: string[]
+          swaps?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

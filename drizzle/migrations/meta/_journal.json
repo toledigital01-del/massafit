@@ -22,6 +22,13 @@
       "when": 1795539894768,
       "tag": "0002_body_measurements_progress_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795541637628,
+      "tag": "0003_meal_plan_settings_food_groups",
+      "breakpoints": true
     }
   ]
 }
