@@ -6,8 +6,8 @@ import { analyzeFoodPhoto, type PhotoItem } from '@/lib/photo.functions';
 import { mealNames } from '@/lib/meal-plan';
 import type { recordAction } from '@/lib/massafit.functions';
 
-async function shrink(file:File){
-  const img=await createImageBitmap(file);const scale=Math.min(1,1024/Math.max(img.width,img.height));
+export async function shrink(file:File,max=1024){
+  const img=await createImageBitmap(file);const scale=Math.min(1,max/Math.max(img.width,img.height));
   const c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);
   c.getContext('2d')!.drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',0.8);
 }
