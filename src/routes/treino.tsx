@@ -11,6 +11,8 @@ import { useAuth } from '@/components/auth-context';
 import { AuthDialog } from '@/components/auth-dialog';
 import { planForMode, workoutForDate, suggestNext, type Exercise, type WorkoutMode } from '@/lib/workout';
 import { exerciseImages } from '@/lib/exercise-images';
+import { hasFigure } from '@/lib/exercise-figures';
+import { FigureAnimated, FigureFrame } from '@/components/exercise-figure';
 import { getSetLogs, saveSet } from '@/lib/workout.functions';
 import { localDay } from '@/lib/nutrition';
 
@@ -32,6 +34,7 @@ const MODE_KEY = 'massafit-workout-mode';
 function ExerciseVisual({ slug, name, className, compact = false }: { slug: string; name: string; className: string; compact?: boolean }) {
   const src = exerciseImages[slug];
   if (src) return <img src={src} alt={`Execução correta: ${name}`} loading="lazy" className={`${className} object-cover ${compact ? '' : 'object-[center_25%]'}`}/>;
+  if (hasFigure(slug)) return <FigureFrame slug={slug} e={1} label={`Execução: ${name}`} className={`${className} bg-muted`}/>;
   return <div role="img" aria-label={name} className={`${className} grid place-items-center bg-gradient-to-br from-primary/20 via-muted to-background`}><Dumbbell className="text-primary/70" size={compact ? 28 : 56}/></div>;
 }
 
@@ -59,6 +62,7 @@ function ExerciseDialog({ ex, logs, day, onClose, onRest, requireAuth }: { ex: E
   const suggestion = suggestNext(ex, last);
   const [rows, setRows] = useState(() => Array.from({ length: ex.sets }, (_, i) => { const t = today.find(l => l.set_number === i + 1); return { weight: t ? Number(t.weight) : suggestion?.weight ?? 0, reps: t ? t.reps : suggestion?.reps ?? ex.repMin, done: Boolean(t) }; }));
   const [busy, setBusy] = useState<number | null>(null);
+  const [view, setView] = useState<'exec' | 'foto'>('exec');
   const chart = useMemo(() => [...new Set(mine.map(l => l.day))].map(d => ({ day: d.slice(8, 10) + '/' + d.slice(5, 7), carga: Math.max(...mine.filter(l => l.day === d).map(l => Number(l.weight))) })), [mine]);
   async function toggle(i: number) {
     if (!requireAuth()) return; const r = rows[i]!; setBusy(i);
@@ -70,7 +74,8 @@ function ExerciseDialog({ ex, logs, day, onClose, onRest, requireAuth }: { ex: E
   }
   const unit = (ex.timed ? 's' : 'reps') + (ex.perSide ? ' por lado' : '');
   return <Dialog open onOpenChange={v => { if (!v) onClose(); }}><DialogContent className="max-w-lg max-h-[92dvh] overflow-y-auto p-0 gap-0" aria-describedby={undefined}>
-    <div className="relative"><ExerciseVisual slug={ex.slug} name={ex.name} className="w-full aspect-[4/3]"/><div className="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-background via-background/80 to-transparent"><p className="eyebrow text-primary">{ex.muscles}</p><DialogTitle className="text-2xl mt-1">{ex.name}</DialogTitle></div></div>
+    <div className="relative">{view === 'foto' && exerciseImages[ex.slug] ? <ExerciseVisual slug={ex.slug} name={ex.name} className="w-full aspect-[4/3]"/> : hasFigure(ex.slug) ? <FigureAnimated slug={ex.slug} label={`Execução animada: ${ex.name}`} className="w-full aspect-[250/219] bg-[#111827]"/> : <ExerciseVisual slug={ex.slug} name={ex.name} className="w-full aspect-[4/3]"/>}<div className="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-background via-background/80 to-transparent"><p className="eyebrow text-primary">{ex.muscles}</p><DialogTitle className="text-2xl mt-1">{ex.name}</DialogTitle></div>{exerciseImages[ex.slug] && hasFigure(ex.slug) && <div className="absolute top-3 left-3 flex rounded-md bg-background/80 backdrop-blur p-0.5 text-xs">{([['exec', 'Execução'], ['foto', 'Foto']] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setView(k)} className={`px-2.5 py-1 rounded ${view === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>{l}</button>)}</div>}</div>
+    {hasFigure(ex.slug) && <div className="grid grid-cols-2 gap-px bg-border border-b border-border">{[[0, 'Início'], [1, 'Fim']].map(([e, l]) => <div key={l} className="relative bg-[#111827]"><FigureFrame slug={ex.slug} e={e as number} label={`${l}: ${ex.name}`} className="w-full aspect-[250/219]"/><span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wide text-white/80">{l}</span></div>)}</div>}
     <div className="p-5 space-y-6">
       <div className="grid grid-cols-3 text-center border-y border-border py-3">{[[`${ex.sets}`, 'séries'], [`${ex.repMin}–${ex.repMax}`, unit], [fmt(ex.rest), 'descanso']].map(([v, l]) => <div key={l}><p className="font-bold text-lg">{v}</p><p className="text-[10px] text-muted-foreground">{l}</p></div>)}</div>
       {ex.equip && <div className="rounded-md bg-muted/40 p-3 text-xs space-y-1.5"><p className="flex gap-2 items-start"><Package size={14} className="text-primary shrink-0 mt-0.5"/><span><span className="font-semibold">Material:</span> {ex.equip}</span></p>{ex.easier && <p><span className="font-semibold">Mais fácil:</span> <span className="text-muted-foreground">{ex.easier}</span></p>}{ex.harder && <p><span className="font-semibold">Mais difícil:</span> <span className="text-muted-foreground">{ex.harder}</span></p>}</div>}
