@@ -8,10 +8,9 @@ import { ProfileDialog } from './profile-dialog';
 import { getDashboard, recordAction } from '@/lib/massafit.functions';
 import { calculateGoals, exampleProfile, localDay } from '@/lib/nutrition';
 import { Button } from './ui/button';
+import { foodCatalog } from '@/lib/food-catalog';
 export type DashboardData = Awaited<ReturnType<typeof getDashboard>>;
-const guestFoods = [
- ['Ovo cozido',146,13.3,9.5,0.6,'1 unidade',50],['Pão integral',253,9.4,3.7,49.9,'1 fatia',25],['Aveia em flocos',394,13.9,8.5,66.6,'1 colher de sopa',15],['Arroz branco cozido',128,2.5,0.2,28.1,'1 colher de sopa',25],['Feijão carioca cozido',76,4.8,0.5,13.6,'1 concha',100],['Peito de frango grelhado',159,32,2.5,0,'1 filé médio',100],['Patinho grelhado',219,35.9,7.3,0,'1 bife médio',100],['Tilápia grelhada',128,26,2.7,0,'1 filé',120],['Batata-doce cozida',77,0.6,0.1,18.4,'1 unidade pequena',100],['Tapioca preparada',230,0.2,0,57.5,'1 unidade média',60],['Banana-prata',98,1.3,0.1,26,'1 unidade',80],['Iogurte natural',51,4.1,3,1.9,'1 pote',170],['Leite integral',61,2.9,3.3,4.3,'1 copo',200],['Castanha-do-pará',643,14.5,63.5,15.1,'2 unidades',10],['Azeite de oliva',884,0,100,0,'1 colher de sopa',13],['Pasta de amendoim',588,25,50,20,'1 colher de sopa',15],['Whey protein',400,80,6,8,'1 medida',30],
-].map((f,index)=>({id:`guest-${index}`,name:String(f[0]),calories:Number(f[1]),protein:Number(f[2]),fat:Number(f[3]),carbs:Number(f[4]),portion_label:String(f[5]),portion_grams:Number(f[6])}));
+const guestFoods = foodCatalog.map((f,index)=>({...f,id:`guest-${index}`}));
 const guestData:DashboardData={profile:{...exampleProfile,id:'guest',name:'',onboarded:true},goals:{...calculateGoals(exampleProfile),user_id:'guest'},foods:guestFoods,meals:[],water:[],weights:[],supplements:[],favorites:[],recent:[]};
 export function useDashboardData(day:string) {
  const {user,loading}=useAuth();const fetchData=useServerFn(getDashboard);
