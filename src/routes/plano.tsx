@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { DataBoundary } from '@/components/dashboard-data';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { calculateGoals, localDay } from '@/lib/nutrition';
+import { calculateGoals, localDay, objectiveOf, type Objective } from '@/lib/nutrition';
+import { ObjectiveCard } from '@/components/objective-card';
 import { buildDay, buildWeek, isTrainingWeekday, optionsFor, swapCandidates, weekdayIndex, type Day, type Goals, type Item, type Meal, type PlanState, type Prefs } from '@/lib/plan-engine';
 import { DEFAULT_SETTINGS, loadFavorites, loadPrefs, loadSettings, loadStates, saveFavorites, savePrefs, saveSettings, saveStates, stateFor, type Favorite, type PlanSettings } from '@/lib/plan-storage';
 import { macrosOf, type Tag } from '@/lib/plan-foods';
@@ -50,21 +51,22 @@ function Plan() {
   return <DataBoundary>{(data, act, busy) => {
     const g = data.goals ?? calculateGoals(data.profile ?? { name: '', sex: 'male', age: 47, height: 177, weight: 69, target_weight: 75, activity: 1.55, training_days: 4, shifts: false });
     const goals: Goals = { calories: g.calories, protein: g.protein, carbs: g.carbs, fat: g.fat };
-    return <PlanBody {...{ goals, settings, prefs, state, weekday, setWeekday, training, tab, setTab, patchState, patchSettings, patchPrefs, favs, setFavs, swapFor, setSwapFor, prefOpen, setPrefOpen, done, setDone, act, busy }} />;
+    const objective = objectiveOf(data.profile ?? { weight: 69, target_weight: 75 });
+    return <PlanBody {...{ objective, goals, settings, prefs, state, weekday, setWeekday, training, tab, setTab, patchState, patchSettings, patchPrefs, favs, setFavs, swapFor, setSwapFor, prefOpen, setPrefOpen, done, setDone, act, busy }} />;
   }}</DataBoundary>;
 }
 
 type Act = (d: never) => Promise<boolean>;
 function PlanBody(p: {
-  goals: Goals; settings: PlanSettings; prefs: Prefs; state: PlanState; weekday: number; setWeekday: (n: number) => void; training: boolean;
+  objective: Objective; goals: Goals; settings: PlanSettings; prefs: Prefs; state: PlanState; weekday: number; setWeekday: (n: number) => void; training: boolean;
   tab: 'dia' | 'semana' | 'receitas'; setTab: (t: 'dia' | 'semana' | 'receitas') => void; patchState: (fn: (s: PlanState) => PlanState) => void;
   patchSettings: (s: PlanSettings) => void; patchPrefs: (p: Prefs) => void; favs: Favorite[]; setFavs: (f: Favorite[]) => void;
   swapFor: { meal: Meal; item: Item } | null; setSwapFor: (v: { meal: Meal; item: Item } | null) => void; prefOpen: boolean; setPrefOpen: (b: boolean) => void;
   done: string[]; setDone: (d: string[]) => void; act: Act; busy: boolean;
 }) {
   const { goals, settings, prefs, state, weekday, training } = p;
-  const day: Day = useMemo(() => buildDay(goals, { meals: settings.meals, training, shift: settings.shift, prefs, state, dayIndex: weekday }), [goals, settings, training, prefs, state, weekday]);
-  const week: Day[] = useMemo(() => p.tab === 'semana' ? buildWeek(goals, { meals: settings.meals, shift: settings.shift, prefs }) : [], [p.tab, goals, settings, prefs]);
+  const day: Day = useMemo(() => buildDay(goals, { meals: settings.meals, training, shift: settings.shift, prefs, state, dayIndex: weekday, objective: p.objective }), [p.objective, goals, settings, training, prefs, state, weekday]);
+  const week: Day[] = useMemo(() => p.tab === 'semana' ? buildWeek(goals, { meals: settings.meals, shift: settings.shift, prefs, objective: p.objective }) : [], [p.objective, p.tab, goals, settings, prefs]);
   const today = weekday === weekdayIndex(new Date());
 
   const logMeal = async (m: Meal) => {
@@ -84,6 +86,7 @@ function PlanBody(p: {
       <p className="text-xs text-muted-foreground mt-2">Gerado pela sua meta de {goals.calories} kcal e {goals.protein} g de proteína. Se o check-in mudar a meta, o plano acompanha. Referência geral: ajuste com seu nutricionista.</p></div>
       <Button variant="secondary" onClick={() => p.setPrefOpen(true)}><Settings2/>Preferências</Button></div>
 
+    <ObjectiveCard objective={p.objective} />
     <div className="flex flex-wrap gap-2 mb-4 items-center">
       <div className="flex bg-secondary p-1 rounded-md">{(['dia', 'semana', 'receitas'] as const).map(t => <Button key={t} size="sm" variant={p.tab === t ? 'default' : 'ghost'} onClick={() => p.setTab(t)}>{t === 'dia' ? 'Dia' : t === 'semana' ? 'Semana' : 'Receitas'}</Button>)}</div>
       <div className="flex bg-secondary p-1 rounded-md"><Button size="sm" variant={settings.shift ? 'ghost' : 'default'} onClick={() => p.patchSettings({ ...settings, shift: false })}><Sun/>Folga</Button><Button size="sm" variant={settings.shift ? 'default' : 'ghost'} onClick={() => p.patchSettings({ ...settings, shift: true })}><BriefcaseBusiness/>Plantão</Button></div>
@@ -111,7 +114,7 @@ function PlanBody(p: {
         </section>;
       })}</div>
       {p.favs.length > 0 && <section className="panel p-5 mt-5"><h2 className="section-title mb-2">Cardápios favoritos</h2>{p.favs.map(f => <div key={f.id} className="flex items-center gap-2 mt-2"><Button size="sm" variant="secondary" className="flex-1 justify-start text-xs" disabled={p.busy} onClick={() => void p.act({ kind: 'custom', day: localDay(), meal: f.meal, items: f.items } as never)}>{f.name} · {Math.round(f.items.reduce((s, i) => s + i.calories, 0))} kcal</Button><Button size="icon" variant="ghost" title="Apagar" onClick={() => { const n = p.favs.filter(x => x.id !== f.id); p.setFavs(n); saveFavorites(n); }}><Trash2 className="text-muted-foreground"/></Button></div>)}</section>}
-    </> : p.tab === 'semana' ? <WeekView week={week} goals={goals} /> : <RecipesView prefs={prefs} busy={p.busy} act={p.act} />}
+    </> : p.tab === 'semana' ? <WeekView week={week} goals={goals} /> : <RecipesView objective={p.objective} prefs={prefs} busy={p.busy} act={p.act} />}
 
     <SwapDialog target={p.swapFor} prefs={prefs} onClose={() => p.setSwapFor(null)} onPick={foodId => { const t = p.swapFor; if (!t) return; p.patchState(s => ({ ...s, swap: { ...s.swap, [`${t.meal.type}:${t.item.slot}`]: foodId } })); p.setSwapFor(null); }} onReset={() => { const t = p.swapFor; if (!t) return; p.patchState(s => { const swap = { ...s.swap }; delete swap[`${t.meal.type}:${t.item.slot}`]; return { ...s, swap }; }); p.setSwapFor(null); }} />
     <PrefsDialog open={p.prefOpen} prefs={prefs} onChange={p.patchPrefs} onClose={() => p.setPrefOpen(false)} />
@@ -146,8 +149,8 @@ function PrefsDialog({ open, prefs, onChange, onClose }: { open: boolean; prefs:
     <Button onClick={onClose}>Pronto</Button></DialogContent></Dialog>;
 }
 
-function RecipesView({ prefs, busy, act }: { prefs: Prefs; busy: boolean; act: Act }) {
-  const list = recipesFor(prefs);
+function RecipesView({ objective, prefs, busy, act }: { objective: Objective; prefs: Prefs; busy: boolean; act: Act }) {
+  const list = recipesFor(prefs, undefined, objective);
   return <div><p className="text-xs text-muted-foreground mb-3">Receitas simples feitas só com os alimentos do plano, respeitando suas preferências. Quantidades de 1 porção.</p>
     <div className="nutrition-grid">{list.map(v => <section className="panel p-5" key={v.recipe.id}>
       <span className="eyebrow">{v.recipe.meal} · {v.recipe.minutes} min</span><h2 className="section-title mt-1 mb-2">{v.recipe.name}</h2>

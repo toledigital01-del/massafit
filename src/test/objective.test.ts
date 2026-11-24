@@ -32,3 +32,32 @@ describe('objetivo: emagrecer / manter / ganhar', () => {
     expect(Math.abs(d.kcal / g.calories - 1)).toBeLessThan(0.1);
   });
 });
+
+import { optionsFor } from '@/lib/plan-engine';
+import { recipesFor } from '@/lib/recipes';
+import { GUIDES } from '@/lib/objective-guide';
+import { OPTIONS } from '@/lib/plan-templates';
+describe('cardápios por objetivo', () => {
+  it('cada refeição tem cardápios próprios para emagrecer e para ganhar', () => {
+    for (const t of Object.keys(OPTIONS) as (keyof typeof OPTIONS)[]) {
+      const lose = optionsFor(t, NO_PREFS, false, 'lose'), gain = optionsFor(t, NO_PREFS, false, 'gain');
+      expect(lose.some(o => o.goals?.includes('lose'))).toBe(true);
+      expect(gain.some(o => o.goals?.includes('gain'))).toBe(true);
+      expect(lose.every(o => !o.goals || o.goals.includes('lose'))).toBe(true);
+      expect(gain.every(o => !o.goals || o.goals.includes('gain'))).toBe(true);
+    }
+  });
+  it('dia de emagrecimento é menos denso por refeição que o de ganho e fica perto da meta', () => {
+    const g = calculateGoals(loser, -400);
+    for (const training of [true, false]) {
+      const d = buildDay(g, { meals: 5, training, shift: false, prefs: NO_PREFS, state: EMPTY_STATE, dayIndex: 1, objective: 'lose' });
+      expect(Math.abs(d.kcal / g.calories - 1)).toBeLessThan(0.1);
+      expect(d.p / g.protein).toBeGreaterThan(0.85);
+    }
+  });
+  it('receitas e guias por objetivo', () => {
+    expect(recipesFor(NO_PREFS, undefined, 'lose').every(v => !v.recipe.goals || v.recipe.goals.includes('lose'))).toBe(true);
+    expect(recipesFor(NO_PREFS, undefined, 'lose').length).toBeGreaterThan(3);
+    for (const k of ['gain', 'lose', 'maintain'] as const) expect(GUIDES[k].sources.length).toBeGreaterThan(0);
+  });
+});
