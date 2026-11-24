@@ -9,4 +9,4 @@
 
 - [x] Treino em casa sem equipamentos de academia (alternância Academia / Em casa na tela de treino).
 
-Etapas futuras: medidas e check-in; lembretes, compras e exportação.
+Etapas futuras: medidas e check-in; lembretes, compras e exportação.- [x] Figuras animadas de execução (início → fim, músculos em vermelho) para todos os exercícios, academia e casa.
