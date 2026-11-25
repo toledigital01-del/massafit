@@ -9,7 +9,7 @@ export type PlanState = { opt: Partial<Record<MealType, number>>; swap: Record<s
 export const EMPTY_STATE: PlanState = { opt: {}, swap: {} };
 export type Ctx = { meals: 4 | 5 | 6; training: boolean; shift: boolean; prefs: Prefs; state: PlanState; dayIndex: number; objective?: Goal };
 
-const MEAL_SETS: Record<4 | 5 | 6, MealType[]> = {
+export const MEAL_SETS: Record<4 | 5 | 6, MealType[]> = {
   4: ['cafe', 'almoco', 'pre', 'jantar'],
   5: ['cafe', 'lanche', 'almoco', 'pre', 'jantar'],
   6: ['cafe', 'lanche', 'almoco', 'pre', 'jantar', 'ceia'],
