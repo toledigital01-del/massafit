@@ -1,4 +1,4 @@
-import { buildWeek, shoppingFromWeek, type Goals, type Prefs } from './plan-engine';
+import { buildDay, EMPTY_STATE, isTrainingWeekday, shoppingFromWeek, type Goals, type PlanState, type Prefs } from './plan-engine';
 import { GROUP_LABEL } from './plan-foods';
 import { planOptions } from './meal-plan';
 
@@ -25,11 +25,10 @@ export function weeklyShoppingList(shiftDays = 0, days = 7): ShopItem[] {
 
 export const formatQty = (g: number) => (g >= 1000 ? `${(g / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg` : `${Math.round(g)} g`);
 
-/** Lista de compras a partir do plano flexível da semana (metas, preferências e dias de plantão em marmita). */
-export function planShoppingList(goals: Goals, opts: { meals: 4 | 5 | 6; prefs: Prefs; shiftDays: number; objective?: 'gain' | 'lose' | 'maintain' }): ShopItem[] {
-  const off = buildWeek(goals, { meals: opts.meals, shift: false, prefs: opts.prefs, ...(opts.objective ? { objective: opts.objective } : {}) });
-  const on = buildWeek(goals, { meals: opts.meals, shift: true, prefs: opts.prefs, ...(opts.objective ? { objective: opts.objective } : {}) });
-  const week = off.map((d, i) => (i < Math.min(Math.max(opts.shiftDays, 0), 7) ? on[i]! : d));
+/** Lista de compras = soma do mesmo plano que aparece em /plano: cada dia da semana com as trocas e opções escolhidas, e os dias de plantão em marmita. */
+export function planShoppingList(goals: Goals, opts: { meals: 4 | 5 | 6; prefs: Prefs; shiftDays: number; objective?: 'gain' | 'lose' | 'maintain'; states?: Record<string, PlanState> }): ShopItem[] {
+  const shiftN = Math.min(Math.max(opts.shiftDays, 0), 7);
+  const week = Array.from({ length: 7 }, (_, d) => buildDay(goals, { meals: opts.meals, shift: d < shiftN, prefs: opts.prefs, training: isTrainingWeekday(d), dayIndex: d, state: opts.states?.[String(d)] ?? EMPTY_STATE, ...(opts.objective ? { objective: opts.objective } : {}) }));
   return shoppingFromWeek(week).filter(l => l.grams > 0).map(l => ({ name: l.food.name, grams: l.grams, category: GROUP_LABEL[l.food.group] }))
     .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 }

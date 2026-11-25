@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { AuthDialog } from './auth-dialog';
 import { useAuth } from './auth-context';
 import { supabase } from '@/integrations/supabase/client';
+import { useReminderScheduler } from './reminders';
 const links=[{to:'/' as const,label:'Visão geral',short:'Início',icon:LayoutDashboard},{to:'/diario' as const,label:'Diário alimentar',short:'Diário',icon:NotebookPen},{to:'/plano' as const,label:'Plano alimentar',short:'Plano',icon:Utensils},{to:'/treino' as const,label:'Treino',short:'Treino',icon:Dumbbell},{to:'/compras' as const,label:'Lista de compras',short:'Compras',icon:ShoppingCart},{to:'/progresso' as const,label:'Progresso',short:'Progresso',icon:Camera},{to:'/perfil' as const,label:'Meu perfil',short:'Perfil',icon:UserRound}];
 export function Brand(){return <div className="brand"><span className="brand-symbol"><Dumbbell size={22}/></span><span>Massa<span className="text-primary">Fit</span><span className="text-primary text-lg">.</span></span></div>;}
 export function MassaFitShell({children}:{children:ReactNode}){
- const {user}=useAuth();const [auth,setAuth]=useState(false);const path=useRouterState({select:s=>s.location.pathname});
+ useReminderScheduler();const {user}=useAuth();const [auth,setAuth]=useState(false);const path=useRouterState({select:s=>s.location.pathname});
  const nav=links.map(item=><Button asChild variant="ghost" key={item.to} className={`nav-item ${path===item.to?'active':''}`}><Link to={item.to}><item.icon/><span className="nav-long">{item.label}</span><span className="nav-short">{item.short}</span></Link></Button>);
  return <div className="app-layout"><aside className="app-sidebar"><Brand/><p className="eyebrow mt-12 mb-4 pl-4">SEU ACOMPANHAMENTO</p><nav className="space-y-2">{nav}</nav>
  <div className="mt-10 border-t border-border pt-6 px-4"><p className="eyebrow mb-3">NA PRÓXIMA ETAPA</p><p className="text-xs text-muted-foreground flex items-center gap-3 py-3"><Leaf size={17}/>Saúde e medidas</p></div>
