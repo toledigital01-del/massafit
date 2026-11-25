@@ -1,3 +1,4 @@
+import { FOODS, type Food, type Group, type Tag } from './plan-foods';
 /** Catálogo de alimentos brasileiros (valores por 100 g, aproximados da tabela TACO). */
 export type FoodGroup = 'proteina'|'carboidrato'|'leguminosa'|'fruta'|'verdura'|'laticinio'|'gordura'|'suplemento'|'outros';
 export type CatalogFood = { name:string; food_group:FoodGroup; calories:number; protein:number; carbs:number; fat:number; portion_label:string; portion_grams:number; tags:string[] };
@@ -99,4 +100,20 @@ const rows: Row[] = [
  ['Whey protein','suplemento',400,80,8,6,'1 medida',30,'lactose'],
  ['Mel','outros',309,0,84,0,'1 colher de sopa',20,''],
 ];
-export const foodCatalog: CatalogFood[] = rows.map(([name,food_group,calories,protein,carbs,fat,portion_label,portion_grams,tags]) => ({name,food_group,calories,protein,carbs,fat,portion_label,portion_grams,tags:tags?tags.split(',').filter(Boolean):[]}));
+/** Nomes antigos que já existem no catálogo do plano com outro nome: ficam fora para não duplicar valores. */
+const ALIASES = new Set(['Coxa de frango assada','Frango desfiado','Lombo de porco assado','Sardinha em lata','Atum em lata (água)','Peito de peru fatiado','Cuscuz de milho','Tapioca preparada','Pão integral','Pão de queijo','Queijo muçarela','Requeijão light','Iogurte grego','Castanha de caju','Açaí (polpa, sem açúcar)','Abobrinha refogada','Cenoura crua','Salada de folhas']);
+const norm = (n: string) => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+const GROUP: Record<Group, FoodGroup> = { proteina: 'proteina', carbo: 'carboidrato', leguminosa: 'leguminosa', fruta: 'fruta', verdura: 'verdura', laticinio: 'laticinio', gordura: 'gordura' };
+const TAG: Record<Tag, string | null> = { lactose: 'lactose', gluten: 'gluten', meat: 'carne', redmeat: 'carne_vermelha', fish: 'peixe', egg: 'ovo' };
+/** Alimento do plano no formato do diário: fonte única de nome, macros e porção caseira. */
+export function catalogFromPlan(f: Food): CatalogFood {
+  const tags = f.tags.map(t => TAG[t]).filter((t): t is string => !!t);
+  if (f.cost === 1) tags.push('economico');
+  return { name: f.name, food_group: f.id === 'whey' ? 'suplemento' : GROUP[f.group], calories: f.kcal, protein: f.p, carbs: f.c, fat: f.f,
+    portion_label: f.unit ? `1 ${f.unit.s}` : '100 g', portion_grams: f.unit?.grams ?? 100, tags };
+}
+const planNames = new Set(FOODS.map(f => norm(f.name)));
+const extras: CatalogFood[] = rows.filter(r => !ALIASES.has(r[0]) && !planNames.has(norm(r[0])))
+  .map(([name,food_group,calories,protein,carbs,fat,portion_label,portion_grams,tags]) => ({name,food_group,calories,protein,carbs,fat,portion_label,portion_grams,tags:tags?tags.split(',').filter(Boolean):[]}));
+/** Catálogo único: alimentos do plano + poucos extras só do diário (mel, wrap, biscoito de arroz…). */
+export const foodCatalog: CatalogFood[] = [...FOODS.map(catalogFromPlan), ...extras];

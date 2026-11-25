@@ -1,5 +1,5 @@
 /** Motor do plano alimentar: monta o dia pelas metas, ajusta quantidades, respeita preferências e calcula trocas equivalentes. */
-import { FOODS, macrosOf, mustFood, portionText, roundGrams, type Food, type Tag } from './plan-foods';
+import { FOODS, foodById, macrosOf, mustFood, portionText, roundGrams, type Food, type Tag } from './plan-foods';
 import { MEAL_LABEL, MEAL_TIME, OPTIONS, type Goal, type MealOption, type MealType, type Slot } from './plan-templates';
 
 export type Goals = { calories: number; protein: number; carbs: number; fat: number };
@@ -39,8 +39,9 @@ export function optionsFor(type: MealType, prefs: Prefs, shift = false, objectiv
 }
 
 export type Item = { slot: number; food: Food; grams: number; kcal: number; p: number; c: number; f: number; text: string };
-export type Meal = { type: MealType; label: string; time: string; option: MealOption; optionIndex: number; optionCount: number; items: Item[]; kcal: number; p: number; c: number; f: number; target: { kcal: number; p: number } };
-export type Day = { meals: Meal[]; kcal: number; p: number; c: number; f: number; goals: Goals };
+export type Meal = { type: MealType; label: string; time: string; option: MealOption; optionIndex: number; optionCount: number; items: Item[]; kcal: number; p: number; c: number; f: number; target: { kcal: number; p: number; f?: number } };
+/** `effective`: metas que o plano conseguiu usar; `warnings`: avisos para mostrar à pessoa (nunca esconder um ajuste). */
+export type Day = { meals: Meal[]; kcal: number; p: number; c: number; f: number; goals: Goals; effective: Goals; mealsUsed: 4 | 5 | 6; warnings: string[] };
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
@@ -53,8 +54,17 @@ export function equivalentGrams(from: Food, grams: number, to: Food): number {
 
 type Work = { food: Food; role: Slot['role']; g: number; lo: number; hi: number };
 
-function solveMeal(slots: Work[], target: { kcal: number; p: number }): void {
+function solveMeal(slots: Work[], target: { kcal: number; p: number; f?: number }): void {
   for (let it = 0; it < 40; it++) {
+    // gordura: entre os alimentos de energia, troca peso de gordurosos por carboidratos (ou o contrário) para chegar perto da meta de gordura
+    if (target.f !== undefined) {
+      const en = slots.filter(s => s.role === 'energy');
+      const fatty = en.filter(s => s.food.f * 9 > s.food.c * 4), carby = en.filter(s => s.food.f * 9 <= s.food.c * 4);
+      if (fatty.length && carby.length) {
+        const curF = slots.reduce((a, s) => a + macrosOf(s.food, s.g).f, 0), fatF = fatty.reduce((a, s) => a + macrosOf(s.food, s.g).f, 0);
+        if (fatF > 0) { const r = clamp((target.f - (curF - fatF)) / fatF, 0.7, 1.4); for (const s of fatty) s.g = clamp(s.g * r, s.lo, s.hi); }
+      }
+    }
     const prot = slots.filter(s => s.role === 'protein');
     if (prot.length) {
       const other = slots.filter(s => s.role !== 'protein').reduce((a, s) => a + macrosOf(s.food, s.g).p, 0);
@@ -71,11 +81,13 @@ function solveMeal(slots: Work[], target: { kcal: number; p: number }): void {
 }
 
 /** `relax` (0 a 1) afrouxa os limites de porção quando as metas fogem muito do tamanho padrão dos cardápios (ex.: 1.200 kcal). */
-function buildMeal(type: MealType, opt: MealOption, optionIndex: number, optionCount: number, target: { kcal: number; p: number }, state: PlanState, relax = 0): Meal {
+function buildMeal(type: MealType, opt: MealOption, optionIndex: number, optionCount: number, target: { kcal: number; p: number; f?: number }, state: PlanState, prefs: Prefs, relax = 0): Meal {
   const work: Work[] = opt.slots.map((s, i) => {
-    const swapId = state.swap[`${type}:${i}`];
     const orig = mustFood(s.food);
-    const food = swapId ? mustFood(swapId) : orig;
+    // troca salva só vale se o alimento ainda existe e respeita as preferências atuais
+    const swapped = foodById(state.swap[`${type}:${i}`] ?? '');
+    const swapId = swapped && usable(swapped, prefs) ? swapped.id : undefined;
+    const food = swapped && swapId ? swapped : orig;
     const g0 = swapId ? equivalentGrams(orig, s.g, food) : s.g;
     // gorduras "fixas" (azeite, pasta, castanha) escalam um pouco com as calorias da refeição
     if (s.role === 'fixed' && food.group === 'gordura') return { food, role: 'energy' as const, g: g0, lo: (1 - 0.8 * relax) * 0.5 * g0, hi: (1 + relax) * 2 * g0 };
@@ -93,35 +105,43 @@ function buildMeal(type: MealType, opt: MealOption, optionIndex: number, optionC
 }
 
 export function buildDay(goalsIn: Goals, ctx0: Ctx): Day {
-  // metas muito baixas não comportam 5 ou 6 refeições com porções mínimas: usa 4. Proteína limitada a 35% das calorias.
+  const warnings: string[] = [];
+  // metas muito baixas não comportam 5 ou 6 refeições com porções mínimas: usa 4 e avisa.
   const ctx = goalsIn.calories < 1700 && ctx0.meals > 4 ? { ...ctx0, meals: 4 as const } : ctx0;
-  const goals = { ...goalsIn, protein: Math.min(goalsIn.protein, Math.round(goalsIn.calories * 0.35 / 4)) };
+  if (ctx.meals !== ctx0.meals) warnings.push(`Com menos de 1.700 kcal o plano usa 4 refeições (você escolheu ${ctx0.meals}) para manter porções que dá para medir.`);
+  const capP = Math.round(goalsIn.calories * 0.35 / 4);
+  const goals = { ...goalsIn, protein: Math.min(goalsIn.protein, capP) };
+  if (goals.protein < goalsIn.protein) warnings.push(`Proteína limitada a ${capP} g (35% das calorias); sua meta é ${goalsIn.protein} g.`);
   const types = MEAL_SETS[ctx.meals];
-  const w = (ctx.training ? WEIGHTS[ctx.meals].train : WEIGHTS[ctx.meals].rest);
-  const chosen = types.map(type => {
-    const obj = ctx.objective ?? 'gain';
+  const wAll = (ctx.training ? WEIGHTS[ctx.meals].train : WEIGHTS[ctx.meals].rest);
+  const obj = ctx.objective ?? 'gain';
+  const chosen: { type: MealType; opt: MealOption; idx: number; count: number; w: number }[] = [];
+  const skipped: MealType[] = [];
+  types.forEach((type, i) => {
     let opts = optionsFor(type, ctx.prefs, ctx.shift, obj);
     if (!opts.length) opts = optionsFor(type, ctx.prefs, false, obj);
-    if (!opts.length) opts = OPTIONS[type]; // preferências restritivas demais: não deixa a refeição vazia
+    if (!opts.length) { skipped.push(type); return; } // nunca fura as restrições
     const idx = (ctx.state.opt[type] ?? ctx.dayIndex) % opts.length;
-    return { type, opt: opts[idx]!, idx, count: opts.length };
+    chosen.push({ type, opt: opts[idx]!, idx, count: opts.length, w: wAll[i] ?? 0 });
   });
-  // Refeições com mínimos/máximos (ex.: meio copo de leite) desviam do alvo; 3 passadas redistribuem a diferença.
+  if (skipped.length) warnings.push(`Nenhum cardápio de ${skipped.map(t => MEAL_LABEL[t].toLowerCase()).join(', ')} respeita suas restrições; as outras refeições cobrem a meta. Afrouxe alguma restrição para voltar.`);
+  const wSum = chosen.reduce((a, c) => a + c.w, 0) || 1;
   let kcalK = 1, pK = 1;
   let day!: Day; let best: Day | undefined; let bestErr = Infinity;
   let relax = 0;
   for (let pass = 0; pass < 9; pass++) {
-    const meals = chosen.map((c, i) => buildMeal(c.type, c.opt, c.idx, c.count, { kcal: goals.calories * (w[i] ?? 0) * kcalK, p: goals.protein * (w[i] ?? 0) * pK }, ctx.state, relax));
+    const meals = chosen.map(c => { const share = c.w / wSum; return buildMeal(c.type, c.opt, c.idx, c.count, { kcal: goals.calories * share * kcalK, p: goals.protein * share * pK, f: goals.fat * share }, ctx.state, ctx.prefs, relax); });
     const sum = (k: 'kcal' | 'p' | 'c' | 'f') => Math.round(meals.reduce((a, m) => a + m[k], 0));
-    day = { meals, kcal: sum('kcal'), p: sum('p'), c: sum('c'), f: sum('f'), goals: goalsIn };
+    day = { meals, kcal: sum('kcal'), p: sum('p'), c: sum('c'), f: sum('f'), goals: goalsIn, effective: goals, mealsUsed: ctx.meals, warnings };
+    if (!meals.length) return day;
     const dk = goals.calories / day.kcal, dp = goals.protein / day.p;
-    const err = Math.abs(dk - 1) + 0.3 * Math.abs(dp - 1);
+    const err = Math.abs(dk - 1) + 0.3 * Math.abs(dp - 1) + 0.1 * Math.abs(goals.fat / Math.max(1, day.f) - 1);
     if (err < bestErr) { best = day; bestErr = err; }
     if (Math.abs(dk - 1) < 0.02 && Math.abs(dp - 1) < 0.04) break;
-    if (pass >= 2 && Math.abs(dk - 1) > 0.03) relax = 1; // as passadas normais não bastaram: libera porções menores/maiores
+    if (pass >= 2 && Math.abs(dk - 1) > 0.03) relax = 1;
     kcalK *= dk; pK *= dp;
   }
-  return best ?? day; // as passadas oscilam perto do alvo: fica com a mais próxima
+  return best ?? day;
 }
 
 export type Swap = { food: Food; grams: number; text: string; kcal: number; p: number };
@@ -136,12 +156,21 @@ export function swapCandidates(item: Pick<Item, 'food' | 'grams'>, prefs: Prefs,
   }).slice(0, limit);
 }
 
-/** Dias de treino da semana (seg=0 … dom=6): Seg, Ter, Qui, Sex. */
-export const isTrainingWeekday = (i: number) => [0, 1, 3, 4].includes(i);
+/** Dias de treino (seg=0 … dom=6) pelo número de treinos do perfil, espalhados na semana. */
+export function trainingWeekdays(n = 4): number[] {
+  const MAP: Record<number, number[]> = { 0: [], 1: [0], 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6] };
+  return MAP[clamp(Math.round(n), 0, 7)] ?? MAP[4]!;
+}
+export const isTrainingWeekday = (i: number, days: number[] = trainingWeekdays(4)) => days.includes(i);
 export const weekdayIndex = (d: Date) => (d.getDay() + 6) % 7;
 
-export function buildWeek(goals: Goals, base: Omit<Ctx, 'dayIndex' | 'training' | 'state'>): Day[] {
-  return Array.from({ length: 7 }, (_, d) => buildDay(goals, { ...base, training: isTrainingWeekday(d), dayIndex: d, state: EMPTY_STATE }));
+export type WeekOpts = { states?: Record<string, PlanState>; shiftDays?: number[]; trainingDays?: number[] };
+/** Contexto de um dia da semana: o mesmo para a aba Semana, o dia selecionado e a lista de compras. */
+export function dayCtx(base: Omit<Ctx, 'dayIndex' | 'training' | 'state' | 'shift'> & { shift?: boolean }, d: number, o: WeekOpts = {}): Ctx {
+  return { ...base, shift: o.shiftDays ? o.shiftDays.includes(d) : !!base.shift, training: isTrainingWeekday(d, o.trainingDays), dayIndex: d, state: o.states?.[String(d)] ?? EMPTY_STATE };
+}
+export function buildWeek(goals: Goals, base: Omit<Ctx, 'dayIndex' | 'training' | 'state' | 'shift'> & { shift?: boolean }, o: WeekOpts = {}): Day[] {
+  return Array.from({ length: 7 }, (_, d) => buildDay(goals, dayCtx(base, d, o)));
 }
 
 export type ShopLine = { food: Food; grams: number; text: string };

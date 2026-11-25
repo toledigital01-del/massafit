@@ -40,7 +40,7 @@ export const FOODS: Food[] = [
   F('mussarela', 'Queijo mussarela', 'proteina', 330, 22.6, 3, 25.2, fatia(20), 2, ['lactose']),
   F('ricota', 'Ricota', 'proteina', 140, 12.6, 3.8, 8.1, fatia(40), 2, ['lactose']),
   F('peito-peru', 'Peito de peru', 'proteina', 98, 17, 2, 2, fatia(20), 2, ['meat']),
-  F('whey', 'Whey protein', 'proteina', 400, 80, 8, 6, u('scoop', 'scoops', 30), 3, ['lactose']),
+  F('whey', 'Whey protein', 'proteina', 400, 80, 8, 6, u('medida', 'medidas', 30), 3, ['lactose']),
   F('tofu', 'Tofu', 'proteina', 80, 8.5, 2, 4.8, fatia(50), 2),
   // leguminosas
   F('feijao-carioca', 'Feijão carioca cozido', 'leguminosa', 76, 4.8, 13.6, 0.5, u('concha', 'conchas', 100), 1),
@@ -60,7 +60,7 @@ export const FOODS: Food[] = [
   F('pao-frances', 'Pão francês', 'carbo', 300, 8, 58.6, 3.1, unid('pãozinho', 'pãezinhos', 50), 1, ['gluten'], true),
   F('pao-integral', 'Pão integral de forma', 'carbo', 253, 9.4, 49.9, 3.7, fatia(25), 2, ['gluten']),
   F('aveia', 'Aveia em flocos', 'carbo', 394, 13.9, 66.6, 8.5, colher(15), 1, ['gluten']),
-  F('milho', 'Milho verde cozido', 'carbo', 98, 3.2, 17, 1.4, colher(25), 1),
+  F('milho', 'Milho verde cozido', 'carbo', 98, 3.2, 17.1, 2.4, colher(25), 1),
   F('pao-queijo', 'Pão de queijo assado', 'carbo', 363, 5.1, 34.2, 24.6, unid('unidade média', 'unidades médias', 30), 2, ['lactose', 'egg']),
   // frutas
   F('banana-prata', 'Banana-prata', 'fruta', 98, 1.3, 26, 0.1, unid('banana', 'bananas', 80), 1, [], true),
@@ -134,7 +134,6 @@ export const FOODS: Food[] = [
   F('granola', 'Granola', 'carbo', 400, 9, 65, 12, colher(15), 3, ['gluten']),
   F('flocos-milho', 'Flocos de milho', 'carbo', 365, 7, 84, 0.5, colher(10), 1),
   F('farinha-aveia', 'Farinha de aveia', 'carbo', 390, 14, 66, 8, colher(15), 2, ['gluten']),
-  F('milho-cozido', 'Milho verde cozido', 'carbo', 98, 3.2, 21, 1, colher(25), 1),
   F('pamonha', 'Pamonha', 'carbo', 170, 3, 30, 4, unid('unidade', 'unidades', 120), 2),
   F('banana-maca', 'Banana-maçã', 'fruta', 87, 1.8, 22.3, 0.1, unid('banana', 'bananas', 80), 1, [], true),
   F('banana-passa', 'Banana-passa', 'fruta', 298, 3.8, 79, 0.5, unid('unidade', 'unidades', 20), 3),
