@@ -58,7 +58,7 @@ function Plan() {
     const g = data.goals ?? calculateGoals(data.profile ?? { name: '', sex: 'male', age: 47, height: 177, weight: 69, target_weight: 75, activity: 1.55, training_days: 4, shifts: false });
     const goals: Goals = { calories: g.calories, protein: g.protein, carbs: g.carbs, fat: g.fat };
     const objective = objectiveOf(data.profile ?? { weight: 69, target_weight: 75 });
-    return <PlanBody {...{ objective, goals, settings, prefs, state, weekday, setWeekday, training, tab, setTab, patchState, patchSettings, patchPrefs, favs, setFavs, swapFor, setSwapFor, prefOpen, setPrefOpen, done, setDone, act, busy, meals: data.meals }} />;
+    return <PlanBody {...{ objective, goals, settings, prefs, state, weekday, setWeekday, training, tab, setTab, patchState, patchSettings, patchPrefs, favs, setFavs, swapFor, setSwapFor, prefOpen, setPrefOpen, states, done, setDone, act, busy, meals: data.meals }} />;
   }}</DataBoundary>;
 }
 
@@ -67,12 +67,12 @@ function PlanBody(p: {
   objective: Objective; goals: Goals; settings: PlanSettings; prefs: Prefs; state: PlanState; weekday: number; setWeekday: (n: number) => void; training: boolean;
   tab: 'dia' | 'semana' | 'receitas'; setTab: (t: 'dia' | 'semana' | 'receitas') => void; patchState: (fn: (s: PlanState) => PlanState) => void;
   patchSettings: (s: PlanSettings) => void; patchPrefs: (p: Prefs) => void; favs: Favorite[]; setFavs: (f: Favorite[]) => void;
-  swapFor: { meal: Meal; item: Item } | null; setSwapFor: (v: { meal: Meal; item: Item } | null) => void; prefOpen: boolean; setPrefOpen: (b: boolean) => void;
+  swapFor: { meal: Meal; item: Item } | null; setSwapFor: (v: { meal: Meal; item: Item } | null) => void; prefOpen: boolean; setPrefOpen: (b: boolean) => void; states: Record<string, PlanState>;
   done: Record<string, string[]>; setDone: Dispatch<SetStateAction<Record<string, string[]>>>; act: Act; busy: boolean; meals: { id: string; meal: string }[];
 }) {
   const { goals, settings, prefs, state, weekday, training } = p;
   const day: Day = useMemo(() => buildDay(goals, { meals: settings.meals, training, shift: settings.shift, prefs, state, dayIndex: weekday, objective: p.objective }), [p.objective, goals, settings, training, prefs, state, weekday]);
-  const week: Day[] = useMemo(() => p.tab === 'semana' ? buildWeek(goals, { meals: settings.meals, shift: settings.shift, prefs, objective: p.objective }) : [], [p.objective, p.tab, goals, settings, prefs]);
+  const week: Day[] = useMemo(() => p.tab === 'semana' ? buildWeek(goals, { meals: settings.meals, prefs, objective: p.objective }, { states: p.states, shiftDays: settings.shift ? [0, 1, 2, 3, 4, 5, 6] : [] }) : [], [p.objective, p.tab, goals, settings, prefs, p.states]);
   const today = weekday === weekdayIndex(new Date());
 
   const mealsRef = useRef(p.meals); mealsRef.current = p.meals;
@@ -153,7 +153,7 @@ function PlanBody(p: {
       {p.favs.length > 0 && <section className="panel p-4 mt-4"><h2 className="font-semibold mb-2">Favoritos</h2>{p.favs.map(f => <div key={f.id} className="flex items-center gap-2 mt-2"><Button size="sm" variant="secondary" className="flex-1 justify-start text-xs" disabled={p.busy} onClick={() => void p.act({ kind: 'custom', day: localDay(), meal: f.meal, items: f.items } as never)}>{f.name} · {kcal10(f.items.reduce((s, i) => s + i.calories, 0))} kcal</Button><Button size="icon" variant="ghost" title="Apagar favorito" aria-label="Apagar favorito" onClick={() => { const n = p.favs.filter(x => x.id !== f.id); p.setFavs(n); saveFavorites(n); }}><Trash2 className="text-muted-foreground"/></Button></div>)}</section>}
     </>}
 
-    {p.tab === 'semana' && <WeekView week={week} />}
+    {p.tab === 'semana' && <WeekView week={week} onEdit={i => { p.setWeekday(i); p.setTab('dia'); }} />}
     {p.tab === 'receitas' && <RecipesView objective={p.objective} prefs={prefs} busy={p.busy} isLogged={isLogged} register={register} undo={undo} />}
 
     <details className="panel p-4 mt-5">
@@ -172,12 +172,16 @@ function PlanBody(p: {
   </div>;
 }
 
-function WeekView({ week }: { week: Day[] }) {
+function WeekView({ week, onEdit }: { week: Day[]; onEdit: (i: number) => void }) {
   return <div className="space-y-2">
-    <p className="text-xs text-muted-foreground">Cardápios variados para a semana. A <a className="text-primary underline" href="/compras">lista de compras</a> usa esta mesma semana.</p>
+    <p className="text-xs text-muted-foreground">Cada dia já inclui as trocas e cardápios que você escolheu em Hoje. A <a className="text-primary underline" href="/compras">lista de compras</a> soma exatamente estes alimentos.</p>
     {week.map((d, i) => <details key={i} className="panel p-4">
-      <summary className="cursor-pointer flex items-center justify-between gap-2 text-sm"><span className="font-semibold">{DAYS[i]}<span className="text-xs font-normal text-muted-foreground"> · {isTrainingWeekday(i) ? 'treino' : 'descanso'}</span></span><span className="text-xs text-muted-foreground tabular-nums">{(Math.round(d.kcal / 10) * 10).toLocaleString('pt-BR')} kcal</span></summary>
-      <ul className="mt-2 text-sm">{d.meals.map(m => <li key={m.type} className="py-1.5 border-t border-border flex justify-between gap-3"><span className="text-muted-foreground shrink-0">{m.label}</span><span className="text-right">{m.option.name}</span></li>)}</ul>
+      <summary className="cursor-pointer flex items-center justify-between gap-2 text-sm"><span className="font-semibold">{DAYS[i]}<span className="text-xs font-normal text-muted-foreground"> · {isTrainingWeekday(i) ? 'treino' : 'descanso'}</span></span><span className="text-xs text-muted-foreground tabular-nums">{(Math.round(d.kcal / 10) * 10).toLocaleString('pt-BR')} kcal · {d.p} g prot.</span></summary>
+      {d.meals.map(m => <div key={m.type} className="mt-3 border-t border-border pt-2 text-sm">
+        <p className="flex justify-between gap-3"><span className="font-medium">{m.label}</span><span className="text-xs text-muted-foreground text-right">{m.option.name}</span></p>
+        <ul className="mt-1">{m.items.map(it => <li key={it.slot} className="flex justify-between gap-3 text-xs py-0.5"><span>{it.food.name}</span><span className="text-muted-foreground text-right">{it.text}</span></li>)}</ul>
+      </div>)}
+      <Button size="sm" variant="secondary" className="w-full mt-3" onClick={() => onEdit(i)}><RefreshCw/>Trocar alimentos deste dia</Button>
     </details>)}
   </div>;
 }

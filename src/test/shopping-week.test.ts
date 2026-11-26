@@ -17,3 +17,18 @@ describe('lista de compras segue o plano da semana', () => {
     expect(JSON.stringify(swapped)).not.toBe(JSON.stringify(base));
   });
 });
+
+describe('aba Semana e lista de compras usam a mesma semana', () => {
+  it('uma troca de alimento aparece na Semana e na lista com as mesmas gramas', async () => {
+    const { buildWeek, shoppingFromWeek, swapCandidates } = await import('@/lib/plan-engine');
+    const d0 = buildWeek(goals, { meals: 5, prefs: NO_PREFS })[0]!;
+    const m = d0.meals[0]!; const it0 = m.items[0]!;
+    const to = swapCandidates(it0, NO_PREFS, 1)[0]!.food;
+    const states = { '0': { opt: {}, swap: { [`${m.type}:${it0.slot}`]: to.id } } };
+    const week = buildWeek(goals, { meals: 5, prefs: NO_PREFS }, { states, shiftDays: [] });
+    expect(week[0]!.meals[0]!.items[0]!.food.id).toBe(to.id);
+    const fromWeek = shoppingFromWeek(week).map(l => [l.food.name, l.grams]);
+    const list = planShoppingList(goals, { meals: 5, prefs: NO_PREFS, shiftDays: 0, states }).map(l => [l.name, l.grams]);
+    expect(list.sort()).toEqual(fromWeek.sort());
+  });
+});
