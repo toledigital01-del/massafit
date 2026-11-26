@@ -1,4 +1,5 @@
 # MassaFit
+- [ ] Compras: unidades e embalagens práticas, sem mudar a soma da Semana; revisão das telas do plano no celular.
 - [ ] Etapa 1: cadastro por e-mail e Google, perfil e metas calculadas e editáveis.
 - [ ] Etapa 2: painel diário, alimentos brasileiros, diário, água e suplementos.
 - [ ] Verificar conta real, registros persistentes, cálculos e instalação PWA.

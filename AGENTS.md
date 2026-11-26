@@ -30,6 +30,7 @@ use the editor.
 <!-- LOVABLE:END -->
 
 ## Application rules
+- Shopping quantities use tested, browser-safe conversion rules; preserve exact prepared-plan grams separately from estimated purchase weights and round packages up only after aggregating the selected period.
 - Keep nutrition formulas in a browser-safe pure module with numeric tests so calculations remain auditable.
 - Private data reads and writes use authenticated server functions and owner-scoped RLS; public routes show a read-only preview and invite sign-in rather than redirecting.
 - A single root auth provider owns identity transitions and clears user query caches on sign-out to avoid cross-account data leakage.
