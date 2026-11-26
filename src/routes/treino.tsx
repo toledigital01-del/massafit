@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
-import { Flame, Repeat, Trophy, Check, ChevronRight, Clock, Dumbbell, House, Lightbulb, Package, Pause, Weight, Play, Timer, TrendingUp, X, AlertTriangle, CircleCheck } from 'lucide-react';
+import { Flame, Repeat, Trophy, Check, ChevronRight, Clock, Dumbbell, House, Lightbulb, Package, Pause, Weight, Play, Timer, TrendingUp, X, AlertTriangle, CircleCheck, RotateCcw, Minimize2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -45,17 +45,20 @@ function ExerciseVisual({ slug, name, className, compact = false }: { slug: stri
 }
 
 function RestTimer({ seconds, onClose }: { seconds: number; onClose: () => void }) {
-  const [left, setLeft] = useState(seconds); const [paused, setPaused] = useState(false);
+  const [left, setLeft] = useState(seconds); const [paused, setPaused] = useState(false); const [mini, setMini] = useState(false);
   useEffect(() => { setLeft(seconds); setPaused(false); }, [seconds]);
   useEffect(() => { if (paused || left <= 0) return; const t = setTimeout(() => setLeft(l => l - 1), 1000); return () => clearTimeout(t); }, [left, paused]);
   useEffect(() => { if (left === 0) { navigator.vibrate?.([300, 150, 300]); toast.success('Descanso concluído · Próxima série!'); } }, [left]);
   const pct = Math.max(0, left / seconds) * 100;
-  return <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[60] w-[min(92vw,380px)] panel p-4 shadow-2xl">
-    <div className="flex items-center gap-3"><Timer className="text-primary"/><div className="flex-1"><p className="eyebrow">Descanso</p><p className="text-3xl font-bold tabular-nums">{left > 0 ? fmt(left) : 'Bora!'}</p></div>
+  if (mini) return <button data-rest-timer type="button" onClick={() => setMini(false)} title="Abrir cronômetro" className="pointer-events-auto fixed top-3 right-3 z-[60] panel px-3 py-2 shadow-2xl flex items-center gap-2 font-bold tabular-nums"><Timer className="size-4 text-primary"/>{left > 0 ? fmt(left) : 'Bora!'}</button>;
+  return <div data-rest-timer className="pointer-events-auto fixed top-3 left-1/2 -translate-x-1/2 z-[60] w-[min(94vw,400px)] panel px-3 py-2 shadow-2xl">
+    <div className="flex items-center gap-1.5"><Timer className="size-5 text-primary shrink-0"/><p className="flex-1 text-2xl font-bold tabular-nums">{left > 0 ? fmt(left) : 'Bora!'}</p>
     <Button variant="secondary" size="icon" title="+15 segundos" onClick={() => setLeft(l => l + 15)}>+15</Button>
     <Button variant="secondary" size="icon" title={paused ? 'Continuar' : 'Pausar'} onClick={() => setPaused(p => !p)}>{paused ? <Play/> : <Pause/>}</Button>
+    <Button variant="secondary" size="icon" title="Zerar (recomeçar)" onClick={() => { setLeft(seconds); setPaused(true); }}><RotateCcw/></Button>
+    <Button variant="ghost" size="icon" title="Minimizar" onClick={() => setMini(true)}><Minimize2/></Button>
     <Button variant="ghost" size="icon" title="Fechar cronômetro" onClick={onClose}><X/></Button></div>
-    <div className="h-1.5 bg-muted rounded-full mt-3 overflow-hidden"><div className="h-full bg-primary transition-all duration-1000 ease-linear" style={{ width: `${pct}%` }}/></div>
+    <div className="h-1 bg-muted rounded-full mt-2 overflow-hidden"><div className="h-full bg-primary transition-all duration-1000 ease-linear" style={{ width: `${pct}%` }}/></div>
   </div>;
 }
 
@@ -79,7 +82,7 @@ function ExerciseDialog({ ex, logs, day, onClose, onRest, requireAuth, onSwap }:
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Erro ao salvar'); } finally { setBusy(null); }
   }
   const unit = (ex.timed ? 's' : 'reps') + (ex.perSide ? ' por lado' : '');
-  return <Dialog open onOpenChange={v => { if (!v) onClose(); }}><DialogContent className="max-w-lg max-h-[92dvh] overflow-y-auto p-0 gap-0" aria-describedby={undefined}>
+  return <Dialog open onOpenChange={v => { if (!v) onClose(); }}><DialogContent onPointerDownOutside={e => { if ((e.target as HTMLElement | null)?.closest?.('[data-rest-timer]')) e.preventDefault(); }} onInteractOutside={e => { if ((e.target as HTMLElement | null)?.closest?.('[data-rest-timer]')) e.preventDefault(); }} className="max-w-lg max-h-[92dvh] overflow-y-auto p-0 gap-0" aria-describedby={undefined}>
     <div className="relative">{view === 'foto' && exerciseImages[ex.slug] ? <ExerciseVisual slug={ex.slug} name={ex.name} className="w-full aspect-[4/3]"/> : hasFigure(ex.slug) ? <FigureAnimated slug={ex.slug} label={`Execução animada: ${ex.name}`} className="w-full aspect-[250/219] bg-[#111827]"/> : <ExerciseVisual slug={ex.slug} name={ex.name} className="w-full aspect-[4/3]"/>}<div className="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-background via-background/80 to-transparent"><p className="eyebrow text-primary">{ex.muscles}</p><DialogTitle className="text-2xl mt-1">{ex.name}</DialogTitle></div>{exerciseImages[ex.slug] && hasFigure(ex.slug) && <div className="absolute top-3 left-3 flex rounded-md bg-background/80 backdrop-blur p-0.5 text-xs">{([['exec', 'Execução'], ['foto', 'Foto']] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setView(k)} className={`px-2.5 py-1 rounded ${view === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>{l}</button>)}</div>}</div>
     {hasFigure(ex.slug) && <div className="grid grid-cols-2 gap-px bg-border border-b border-border">{[[0, 'Início'], [1, 'Fim']].map(([e, l]) => <div key={l} className="relative bg-[#111827]"><FigureFrame slug={ex.slug} e={e as number} label={`${l}: ${ex.name}`} className="w-full aspect-[250/219]"/><span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wide text-white/80">{l}</span></div>)}</div>}
     <div className="p-5 space-y-6">
